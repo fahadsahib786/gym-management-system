@@ -1,0 +1,53 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Danish Fitness",
+  "version": "1.0.0",
+  "identifier": "com.danishfitness.desk",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Danish Fitness",
+        "width": 1280,
+        "height": 760,
+        "minWidth": 1024,
+        "minHeight": 640,
+        "center": true,
+        "visible": false,
+        "resizable": true,
+        "backgroundColor": "#f8fafc"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://photo.localhost photo:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost; media-src 'self' blob: mediastream:; object-src 'none'; base-uri 'self'; form-action 'none'",
+      "devCsp": "default-src 'self' http://localhost:1420; script-src 'self' http://localhost:1420; style-src 'self' 'unsafe-inline' http://localhost:1420; img-src 'self' data: blob: http://photo.localhost photo: http://localhost:1420; font-src 'self' data: http://localhost:1420; connect-src 'self' ipc: http://ipc.localhost ws://localhost:1420 http://localhost:1420; media-src 'self' blob: mediastream:; object-src 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "Danish Fitness",
+    "copyright": "© 2026 Danish Fitness, Khanpur",
+    "category": "Business",
+    "shortDescription": "Gym management for Danish Fitness",
+    "longDescription": "Offline-first gym management for Danish Fitness: members, fees and dues, attendance, expenses, reports, backups and WhatsApp reminders. Designed and developed by Fahad Baloch.",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
+    "windows": {
+      "webviewInstallMode": { "type": "embedBootstrapper", "silent": true },
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false,
+        "languages": ["English"],
+        "installerIcon": "icons/icon.ico",
+        "startMenuFolder": "Danish Fitness",
+        "installerHooks": "./windows/hooks.nsh"
+      }
+    }
+  }
+}

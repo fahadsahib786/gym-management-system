@@ -1,0 +1,31 @@
+[package]
+name = "danish-core"
+description = "Domain logic and data access for Danish Fitness (UI-independent, server-reusable)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+name = "danish_core"
+path = "src/lib.rs"
+
+[dependencies]
+argon2.workspace = true
+base64.workspace = true
+chrono.workspace = true
+csv.workspace = true
+log.workspace = true
+r2d2.workspace = true
+r2d2_sqlite.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+ts-rs.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

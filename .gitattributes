@@ -1,0 +1,9 @@
+# Keep LF line endings in every checkout (Biome and rustfmt expect LF, also on Windows).
+* text=auto eol=lf
+
+# Binary files
+*.png binary
+*.ico binary
+*.icns binary
+*.jpg binary
+*.woff2 binary

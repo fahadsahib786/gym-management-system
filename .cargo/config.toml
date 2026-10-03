@@ -1,0 +1,5 @@
+[env]
+# ts-rs: generated TypeScript bindings for every type crossing the IPC boundary.
+TS_RS_EXPORT_DIR = { value = "src/api/bindings", relative = true }
+# i64 values (money in rupees, counts) fit comfortably in a JS number.
+TS_RS_LARGE_INT = "number"

@@ -1,0 +1,33 @@
+# Dependencies & builds
+node_modules/
+dist/
+target/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Tauri generated
+src-tauri/gen/
+
+# Local data, backups, logs, generated documents
+*.log
+*.db
+*.db-wal
+*.db-shm
+*.pdf
+.demo/
+e2e/output/
+
+# Secrets / local config
+.env
+.env.*
+*.local
+
+# Editors / OS
+.vscode/
+.idea/
+.claude/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
