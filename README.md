@@ -177,6 +177,7 @@ npm run app:build        # release build + installer → target/release/bundle/n
 | `cargo test -p danish-core --release --test performance -- --ignored --nocapture` | Benchmark at gym scale (3,000 members, 24 months) |
 | `node e2e/smoke.mjs` | End-to-end test against the running app (see the file header) |
 | `node e2e/docs-screenshots.mjs` | Regenerate the screenshots in `docs/screenshots/` |
+| `npm run docs:pdf` | Build `docs/Danish Fitness - User Guide.pdf` from the user guide (cover, quick start, screenshots) to send to the gym |
 
 Environment variables: `DANISH_FITNESS_DATA_DIR` (portable/test data folder), `DF_PROFILE=1` (dashboard query
 timings), `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222` (lets the e2e scripts drive the app).
