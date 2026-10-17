@@ -730,7 +730,7 @@ dependencies = [
 
 [[package]]
 name = "danish-core"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "argon2",
  "base64 0.23.1",
@@ -753,7 +753,7 @@ dependencies = [
 
 [[package]]
 name = "danish-fitness"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "base64 0.23.1",
  "chrono",

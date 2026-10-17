@@ -152,7 +152,7 @@ export function SetupWizard({ onDone }: { onDone: (owner: Actor) => void }) {
         </ol>
       </BrandPanel>
 
-      <div className="flex flex-1 flex-col overflow-y-auto">
+      <div className="flex flex-1 flex-col overflow-y-auto overscroll-none">
         <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-6 py-10">
           {step === 0 && (
             <div>

@@ -149,8 +149,9 @@ export function LoginScreen({ status, onLogin }: { status: AppStatus; onLogin: (
         </div>
       </BrandPanel>
 
-      <div className="flex flex-1 flex-col items-center justify-center p-6">
-        <div className="w-full max-w-sm">
+      {/* Scrolls by itself if a long list of staff does not fit; auto margins keep it centred otherwise. */}
+      <div className="flex flex-1 flex-col overflow-y-auto overscroll-none p-6">
+        <div className="m-auto w-full max-w-sm">
           {status.clockWarning && (
             <div className="mb-5 rounded-lg border border-danger/30 bg-danger-soft p-3 text-danger-ink text-sm">
               {status.clockWarning}

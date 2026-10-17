@@ -35,7 +35,7 @@ import { initials, timeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { openDialog } from "@/stores/dialogs";
 import { can, useSession } from "@/stores/session";
-import { useUi } from "@/stores/ui";
+import { useMenuCollapsed, useUi } from "@/stores/ui";
 import { CommandPalette } from "./CommandPalette";
 import { GlobalDialogs } from "./GlobalDialogs";
 
@@ -74,7 +74,7 @@ const NAV: { title: string; items: NavItem[] }[] = [
 ];
 
 function Sidebar() {
-  const collapsed = useUi((s) => s.sidebarCollapsed);
+  const collapsed = useMenuCollapsed();
   const actor = useSession((s) => s.actor);
   const logout = useSession((s) => s.logout);
   const settings = useSettings();
@@ -133,6 +133,8 @@ function Sidebar() {
                     <NavLink
                       to={item.to}
                       end={item.to === "/"}
+                      // On a narrow window the menu was opened by hand: close it again once a page is picked.
+                      onClick={() => useUi.setState({ narrowMenuOpen: false })}
                       className={({ isActive }) =>
                         cn(
                           "group flex h-10 items-center gap-3 rounded-lg px-2.5 font-medium text-sm transition-colors",
@@ -247,52 +249,55 @@ function BackupChip() {
 }
 
 function Topbar({ onSearch }: { onSearch: () => void }) {
-  const collapsed = useUi((s) => s.sidebarCollapsed);
+  const collapsed = useMenuCollapsed();
   const toggle = useUi((s) => s.toggleSidebar);
   const navigate = useNavigate();
   const actor = useSession((s) => s.actor);
   const tracks = useTracksAttendance();
   const today = new Date().toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short" });
   return (
-    <header className="flex h-16 shrink-0 items-center gap-3 border-b bg-card/80 px-4 backdrop-blur">
-      <Tooltip content={collapsed ? "Show menu" : "Hide menu"}>
-        <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle menu">
-          {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
-        </Button>
-      </Tooltip>
-      <button
-        type="button"
-        onClick={onSearch}
-        className="flex h-10 w-full max-w-md items-center gap-2.5 rounded-lg border border-input bg-background px-3 text-muted-foreground text-sm transition-colors hover:bg-muted"
-      >
-        <Search className="size-4" />
-        <span className="flex-1 truncate text-left">Search member by name, phone, ID or CNIC…</span>
-        <Kbd>Ctrl K</Kbd>
-      </button>
-      <div className="ml-auto flex items-center gap-2">
-        <span className="hidden text-muted-foreground text-sm 2xl:inline">{today}</span>
-        <BackupChip />
-        {tracks && (
-          <Tooltip content="Check-in (F4)">
-            <Button variant="outline" onClick={() => navigate("/check-in")}>
-              <ScanLine /> <span className="hidden lg:inline">Check-in</span>
-            </Button>
-          </Tooltip>
-        )}
-        {can(actor, "recordPayments") && (
-          <Tooltip content="Receive payment (F3)">
-            <Button variant="outline" onClick={() => openDialog({ type: "payment" })}>
-              <Wallet /> <span className="hidden lg:inline">Receive payment</span>
-            </Button>
-          </Tooltip>
-        )}
-        {can(actor, "registerMembers") && (
-          <Tooltip content="New member (F2)">
-            <Button onClick={() => navigate("/members/new")}>
-              <UserPlus /> <span className="hidden md:inline">New member</span>
-            </Button>
-          </Tooltip>
-        )}
+    <header className="h-16 shrink-0 border-b bg-card/80 backdrop-blur">
+      {/* Same centred width as the pages (PageContainer), so wide screens keep the bar and the content aligned. */}
+      <div className="mx-auto flex h-full w-full max-w-[1500px] items-center gap-3 px-3 lg:px-5">
+        <Tooltip content={collapsed ? "Show menu" : "Hide menu"}>
+          <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle menu">
+            {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
+          </Button>
+        </Tooltip>
+        <button
+          type="button"
+          onClick={onSearch}
+          className="flex h-10 w-full min-w-0 max-w-md items-center gap-2.5 rounded-lg border border-input bg-background px-3 text-muted-foreground text-sm transition-colors hover:bg-muted"
+        >
+          <Search className="size-4" />
+          <span className="flex-1 truncate text-left">Search member by name, phone, ID or CNIC…</span>
+          <Kbd>Ctrl K</Kbd>
+        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="hidden text-muted-foreground text-sm 2xl:inline">{today}</span>
+          <BackupChip />
+          {tracks && (
+            <Tooltip content="Check-in (F4)">
+              <Button variant="outline" onClick={() => navigate("/check-in")}>
+                <ScanLine /> <span className="hidden lg:inline">Check-in</span>
+              </Button>
+            </Tooltip>
+          )}
+          {can(actor, "recordPayments") && (
+            <Tooltip content="Receive payment (F3)">
+              <Button variant="outline" onClick={() => openDialog({ type: "payment" })}>
+                <Wallet /> <span className="hidden lg:inline">Receive payment</span>
+              </Button>
+            </Tooltip>
+          )}
+          {can(actor, "registerMembers") && (
+            <Tooltip content="New member (F2)">
+              <Button onClick={() => navigate("/members/new")}>
+                <UserPlus /> <span className="hidden md:inline">New member</span>
+              </Button>
+            </Tooltip>
+          )}
+        </div>
       </div>
     </header>
   );
@@ -325,7 +330,7 @@ export function AppShell() {
             <span>{status.clockWarning}</span>
           </div>
         )}
-        <main className="relative flex-1 overflow-y-auto">
+        <main className="relative flex-1 overflow-y-auto overscroll-none">
           <Suspense fallback={<LoadingBlock className="py-24" />}>
             <Outlet />
           </Suspense>

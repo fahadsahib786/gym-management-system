@@ -182,6 +182,13 @@
   }
   html {
     font-size: 15px;
+    /* Touch screens: scrolling yes, pinch-zoom no (see src/lib/zoom-lock.ts). */
+    touch-action: pan-x pan-y;
+  }
+  html,
+  body {
+    /* No rubber-band "bounce" when a touchpad or touch screen scrolls past an edge. */
+    overscroll-behavior: none;
   }
   html[data-text="large"] {
     font-size: 17px;
@@ -216,12 +223,26 @@
   .tabular {
     font-variant-numeric: tabular-nums;
   }
+  /* Amounts, receipt numbers and counts never break across lines in tables. */
+  td.tabular {
+    white-space: nowrap;
+  }
 }
 
 /* Recharts: never draw the focus outline box around the SVG. */
 .recharts-wrapper:focus,
 .recharts-surface:focus {
   outline: none;
+}
+
+/* On screen the window itself never scrolls: each screen scrolls inside its own panel (the app's <main>, the
+   setup wizard, the login panel), so nothing can shift the whole window by a few pixels. */
+@media screen {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
 }
 
 /* Printing: only the print root (receipts, reports) is printed. */

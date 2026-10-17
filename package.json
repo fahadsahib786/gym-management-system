@@ -1,7 +1,7 @@
 {
   "name": "danish-fitness",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Danish Fitness — offline-first gym management desktop app (Model Town B, Khanpur, Rahim Yar Khan)",
   "author": "Fahad Baloch",
   "type": "module",

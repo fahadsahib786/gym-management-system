@@ -20,6 +20,7 @@ import {
   parseAmount,
 } from "./phone";
 import { memberValues, parseWhatsApp, renderTemplate } from "./templates";
+import { lockZoom } from "./zoom-lock";
 
 describe("phone helpers (mirror the Rust normaliser)", () => {
   it("normalises Pakistani mobiles", () => {
@@ -162,5 +163,23 @@ describe("Code 128 barcodes", () => {
     const widths = code128Widths("DF-0001");
     expect(widths.reduce((a, b) => a + b, 0)).toBe(11 * 9 + 13);
     expect(widths).toHaveLength(6 * 9 + 7);
+  });
+});
+
+describe("zoom lock", () => {
+  it("ignores pinch / Ctrl + wheel and the zoom keys, nothing else", () => {
+    const target = new EventTarget() as unknown as Window;
+    lockZoom(target);
+    const fire = (e: Event) => {
+      target.dispatchEvent(e);
+      return e.defaultPrevented;
+    };
+    expect(fire(new WheelEvent("wheel", { ctrlKey: true, cancelable: true }))).toBe(true);
+    expect(fire(new WheelEvent("wheel", { cancelable: true }))).toBe(false);
+    for (const key of ["+", "=", "-", "0"]) {
+      expect(fire(new KeyboardEvent("keydown", { key, ctrlKey: true, cancelable: true }))).toBe(true);
+    }
+    expect(fire(new KeyboardEvent("keydown", { key: "k", ctrlKey: true, cancelable: true }))).toBe(false);
+    expect(fire(new KeyboardEvent("keydown", { key: "-", cancelable: true }))).toBe(false);
   });
 });

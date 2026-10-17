@@ -30,13 +30,27 @@ For the owner and the front-desk staff. Everything works **without internet**. E
 
 ## 1. Install
 
-1. Double-click **`Danish Fitness_1.1.0_x64-setup.exe`**.
+1. Double-click **`Danish Fitness_1.1.1_x64-setup.exe`**.
 2. If Windows says *"Windows protected your PC"*, click **More info → Run anyway** (this appears for new software).
 3. It installs in a few seconds. A **Danish Fitness** icon appears on the desktop and in the Start menu.
 
 No administrator password is needed. The gym's data stays on this computer and is backed up automatically.
 
-**Updating to a new version** later: just run the new installer — your data is kept (see [section 15](#15-backups--your-datas-safety)).
+### Updating to a new version
+
+Your members, fees and history are kept. Only the program is replaced.
+
+1. In the app: **Settings → Backup & restore → Back up now** (an extra copy that is never deleted automatically).
+   Then close Danish Fitness with the **X**.
+2. Double-click the new installer. On the **Already Installed** page choose **Do not uninstall** and click
+   **Next**.
+   If you keep *Uninstall before installing* instead, the old version's uninstall window opens: leave
+   **Delete the application data** unticked and click **Uninstall**.
+3. Open Danish Fitness and log in with your usual PIN. **Settings → About** shows the new version number.
+
+The first start of a new version saves a "**Before update**" backup by itself. If anything looks wrong, restore
+that backup in **Settings → Backup & restore**. Never install an older version over a newer one: it cannot open
+the newer data.
 
 ## 2. First-time setup (5 minutes)
 
@@ -119,7 +133,22 @@ print. Nothing in the gym's data is lost.
 
 The support code stays the same for a day, so you can close the window and call later.
 
+### Who keeps which PIN or key
+
+| What | Who knows it | Where it is kept |
+|---|---|---|
+| Owner PIN | Only the owner | Memorised. Change it in **Settings → Appearance & PIN → Change my PIN**. |
+| Receptionist PIN | That receptionist | Memorised. The owner resets a forgotten one. |
+| **Recovery key** | Only the owner | The printed paper, at home. A photo on the owner's own phone is fine too. |
+| Support code and unlock code | Only needed when the recovery key is lost | Read out on the phone. Each works once. |
+
+Nobody else needs the owner PIN or the recovery key — not the staff, and not the software provider. Fahad Baloch
+will never ask for them. If someone does, don't share them.
+
 ## 4. The dashboard
+
+On a small screen or a narrow window, the left menu shows only icons; the button at the top-left opens it (point
+at an icon to see its name).
 
 The first screen shows the gym at a glance: active members, today's and this month's collection, fee dues, who is
 expiring, who has expired, new members and profit — each with a comparison. **Click any tile** to open the list
@@ -336,8 +365,9 @@ Open **Reports** and pick a tab. Every report can be **printed**; lists can be e
 
 ![Backups](screenshots/31-settings-backup.png)
 
-**Installing a new version** — just run the new installer. It replaces only the program; the data is not touched.
-The first time the new version opens, it saves a "**Before update**" backup automatically.
+**Installing a new version** — follow [Updating to a new version](#updating-to-a-new-version): close the app, run
+the new installer and choose **Do not uninstall**. Only the program is replaced; the data is not touched. The first
+time the new version opens, it saves a "**Before update**" backup automatically.
 
 **Uninstalling and installing again** — the data stays on the PC, so after installing again the app opens with
 everything as before. Even if someone ticks **"Delete the application data"** in the uninstaller, a copy of the data
@@ -359,6 +389,11 @@ In **Membership rules** you set the member ID prefix, when a membership counts a
 period, the default admission fee, the "not visiting" days, and whether to **record check-ins** at all.
 
 ![Membership rules](screenshots/29-settings-membership.png)
+
+**Appearance & PIN** has the light or dark theme, the **text size** and **Change my PIN**. Theme and text size are
+remembered on this computer. Choose **Large** text if the screen is hard to read: the layout adjusts to it. The
+screen itself stays fixed: pinching the touchpad or Ctrl + mouse wheel don't zoom it, and scrolling past the end of
+a list doesn't make it bounce.
 
 ## 17. Fixing mistakes and the activity log
 
@@ -413,6 +448,8 @@ The **Activity log** shows who did what and when, including every deletion. It c
 | Owner forgot PIN | Login screen → **Forgot PIN?** → type the recovery key ([details](#forgot-your-pin)). Key lost? **Lost the key?** → read the support code to Fahad Baloch. |
 | Recovery key paper lost | Log in as the owner → Settings → Users & security → **Create a new key**. The lost key stops working. |
 | No delete button | Only the owner/admin can delete, and a reason is always required. Receptionists can't delete records. |
+| Text too small or too big | Settings → Appearance & PIN → **Text size** (Normal or Large). |
+| Installer says "Already Installed" | Choose **Do not uninstall** and click Next — see [Updating to a new version](#updating-to-a-new-version). |
 
 ## 19. Keyboard shortcuts
 

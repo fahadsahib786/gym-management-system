@@ -4,7 +4,9 @@
 //! safety backup of the live data → swap files while the pool is closed (see `db::Database::replace`).
 
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use rusqlite::{Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
@@ -246,8 +248,26 @@ pub fn inspect(backup_path: &Path, scratch_dir: &Path) -> CoreResult<BackupCheck
 /// Replaces the live database file with a staged copy. Call only while every connection is closed.
 pub fn swap_in(staging: &Path, live_db_path: &Path) -> CoreResult<()> {
     remove_sidecars(live_db_path);
-    fs::rename(staging, live_db_path)?;
-    Ok(())
+    // Antivirus or the search indexer often opens a just-written file for a moment, and Windows then refuses the
+    // rename. Like SQLite on Windows, try again for a short while (up to ~2.75 s) before giving up.
+    let mut attempt = 0;
+    loop {
+        match fs::rename(staging, live_db_path) {
+            Ok(()) => return Ok(()),
+            Err(e) if attempt < 10 && file_busy(&e) => {
+                attempt += 1;
+                std::thread::sleep(Duration::from_millis(50 * attempt));
+            }
+            Err(e) => return Err(e.into()),
+        }
+    }
+}
+
+/// "Access denied" or "in use by another process" — usually gone a moment later.
+fn file_busy(e: &io::Error) -> bool {
+    const ERROR_ACCESS_DENIED: i32 = 5;
+    const ERROR_SHARING_VIOLATION: i32 = 32;
+    matches!(e.raw_os_error(), Some(ERROR_ACCESS_DENIED | ERROR_SHARING_VIOLATION)) || e.kind() == io::ErrorKind::PermissionDenied
 }
 
 #[derive(Serialize, TS, Debug, Clone)]
@@ -367,6 +387,28 @@ pub fn mark_done(conn: &Connection, clock: &Clock, info: &BackupInfo) -> CoreRes
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(windows)]
+    #[test]
+    fn a_restore_waits_for_a_program_that_holds_the_file_for_a_moment() {
+        use std::os::windows::fs::OpenOptionsExt;
+
+        let dir = tempfile::tempdir().unwrap();
+        let staging = dir.path().join("staging.db");
+        let live = dir.path().join("live.db");
+        fs::write(&staging, b"new").unwrap();
+        fs::write(&live, b"old").unwrap();
+        // Like antivirus scanning the new file: open with no sharing at all, then let go after 300 ms.
+        let held = fs::OpenOptions::new().read(true).share_mode(0).open(&staging).unwrap();
+        let release = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(300));
+            drop(held);
+        });
+        swap_in(&staging, &live).unwrap();
+        release.join().unwrap();
+        assert_eq!(fs::read(&live).unwrap(), b"new");
+        assert!(!staging.exists());
+    }
 
     #[test]
     fn a_new_app_version_saves_a_copy_before_touching_the_data() {

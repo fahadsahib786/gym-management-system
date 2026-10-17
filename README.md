@@ -42,11 +42,11 @@ The complete staff manual, with a screenshot for every step, is in **[docs/USER_
 | **Control** | Staff accounts with PIN and roles, an activity log that cannot be edited, voids with reasons — and owner-only permanent deletes of members, payments and fees, each logged with a snapshot. |
 | **Forgotten PIN** | An owner recovery key (printed at setup) resets the owner PIN from the login screen; a lost key is replaced by a one-time unlock code from the developer. |
 | **Safety** | Survives power cuts; automatic backups to a second drive (D:) and USB; "before update" and "before uninstall" copies; one-click restore on a new PC. |
-| **Fast and light** | ~6 MB installer, opens in about a second, dashboard in < 100 ms with 3,000 members. |
+| **Fast and light** | ~6 MB installer, opens in about a second, dashboard in < 100 ms with 3,000 members. A steady layout that fits small laptop windows and large monitors alike, with no accidental zoom or bounce. |
 
 ## Install
 
-1. Download **`Danish Fitness_1.1.0_x64-setup.exe`** from the [Releases](../../releases) page
+1. Download **`Danish Fitness_1.1.1_x64-setup.exe`** from the [Releases](../../releases) page
    (or [build it yourself](#for-developers)).
 2. Double-click it. If Windows shows *"Windows protected your PC"*, click **More info → Run anyway**
    (shown for new software without a paid code-signing certificate).
@@ -136,7 +136,7 @@ Every document can be **printed** or **saved as a PDF** (to send on WhatsApp, e-
 |---|---|
 | **Power cut** | Everything saved before the light went is safe (SQLite WAL + full sync). |
 | **Every day** | Automatic backups on start, every few hours while data changes, and on exit — kept on a **second drive** (e.g. `D:\Danish Fitness\Backups`), plus an optional USB / Google Drive copy. |
-| **New version** | Run the new installer over the old one. Data is untouched; a **"Before update"** backup is taken automatically on first start. |
+| **New version** | Close the app and run the new installer; on **Already Installed** choose **Do not uninstall**. Data is untouched; a **"Before update"** backup is taken automatically on first start. |
 | **Uninstall & reinstall** | Data stays on the PC. Even if *"Delete the application data"* is ticked, the uninstaller first saves a copy in `Documents\Danish Fitness\Backups`. |
 | **New PC / Windows reinstalled** | Install, then click **Restore** on the first screen (or pick the backup from the D: drive / USB). Log in with the same PIN. |
 | **Forgotten owner PIN** | **Forgot PIN?** with the recovery key from setup. Lost key: a one-time unlock code from the developer. Nothing is lost either way. |

@@ -1,6 +1,6 @@
 # Danish Fitness — System Architecture
 
-Version 1.1 · October 2026
+Version 1.1.1 · October 2026
 
 ---
 
@@ -203,6 +203,17 @@ Receipts `R-000001`, strictly sequential and never reused; voided receipts stay 
     the PC's files and SQLite skills can read it, so the Windows account itself should have a password.
 - Tauri capabilities grant the webview only what it needs; strict CSP; external URLs opened from Rust after
   validation (WhatsApp links only).
+- A fixed window. WebView2 pinch-zoom, Ctrl + wheel / Ctrl ± zoom and touch swipe navigation are turned off at
+  start-up (`src-tauri/src/webview.rs`), and the page ignores the same gestures (`src/lib/zoom-lock.ts`,
+  `touch-action`). The window never scrolls on screen (`html, body { overflow: hidden }` in `@media screen`; each
+  screen scrolls inside its own panel), and the touchpad rubber-band bounce is off twice: `overscroll-behavior:
+  none` on the page and its scroll panels, and WebView2 started with `--disable-features=…,ElasticOverscroll,
+  TouchpadOverscrollHistoryNavigation,OverscrollHistoryNavigation` (`additionalBrowserArgs` in `tauri.conf.json`,
+  which must also keep Tauri's own default `msWebOOUI,msPdfOOUI,msSmartScreenProtection`). Bigger text is the
+  Text size setting, which re-flows the layout.
+- Responsive from the minimum window (1024 × 640) up: below 1200 px the menu shows icons only (the menu button
+  opens it until a page is picked), the top bar and page content share one centred 1500 px column on wide
+  screens, and amounts and receipt numbers never wrap in tables.
 - Camera: `Builder::on_permission_request` grants **only** the camera, and only to the app's own bundled pages
   (CSP blocks remote content), so member photos work without WebView2's prompt — whose remembered "Block" would
   otherwise disable the webcam for good. Everything else keeps WebView2's default handling.
@@ -235,8 +246,11 @@ dashboard < 100 ms with 3,000 members / 40,000 payments / 150,000 check-ins.
   becomes unreachable, backups fall back to `Documents\Danish Fitness\Backups` and Settings shows a warning; when
   backups share the data's drive, Settings offers the second drive.
 - **Updates:** before the database is opened, `backup::backup_before_upgrade` copies it (kind `update`) when the
-  schema needs migrating or the app version differs from `system.lastAppVersion`. Tauri's NSIS updater runs the old
-  uninstaller with `/UPDATE`, which never touches app data.
+  schema needs migrating or the app version differs from `system.lastAppVersion`. Run by hand over an older
+  version, the NSIS installer shows *Already Installed*: **Do not uninstall** just replaces the program files;
+  *Uninstall before installing* runs the old uninstaller normally — app data stays unless "Delete the application
+  data" is ticked, and the pre-uninstall hook saves a copy first anyway. Only Tauri's updater passes `/UPDATE`,
+  which skips the uninstall steps entirely.
 - **Uninstall:** `src-tauri/windows/hooks.nsh` (`NSIS_HOOK_PREUNINSTALL`, skipped in update mode) copies the
   database and its WAL to `Documents\Danish Fitness\Backups` and to the folder named in `backup-folder.txt` (written
   after every backup) before anything is removed — even if "Delete the application data" is ticked.

@@ -7,7 +7,7 @@ export function Table({
   ...props
 }: React.ComponentProps<"table"> & { wrapperClassName?: string }) {
   return (
-    <div className={cn("relative w-full overflow-x-auto", wrapperClassName)}>
+    <div className={cn("relative w-full overflow-x-auto overscroll-x-none", wrapperClassName)}>
       <table className={cn("w-full caption-bottom border-collapse text-sm", className)} {...props} />
     </div>
   );

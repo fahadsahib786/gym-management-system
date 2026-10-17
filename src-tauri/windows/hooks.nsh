@@ -1,7 +1,9 @@
 ; Danish Fitness installer hooks (included by Tauri's NSIS template).
 ;
-; Updates (a new installer run over an existing install) never touch the gym data: Tauri runs the old
-; uninstaller with /UPDATE, which skips everything below.
+; Updates never delete the gym data. Tauri's updater runs the old uninstaller with /UPDATE, which skips everything
+; below. A new installer run by hand asks first: "Do not uninstall" only replaces the program; "Uninstall before
+; installing" runs the old uninstaller normally, so the copy below is made and the data stays unless someone ticks
+; "Delete the application data".
 ;
 ; A real uninstall first saves a copy of the database - in Documents\Danish Fitness\Backups and in the folder
 ; the app last backed up to (e.g. D:\Danish Fitness\Backups) - so the data survives even when someone ticks

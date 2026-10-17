@@ -5,6 +5,7 @@ mod drives;
 mod pdf;
 mod protocol;
 mod state;
+mod webview;
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -148,6 +149,11 @@ pub fn run() {
             let dirty = Arc::new(AtomicBool::new(false));
             spawn_backup_scheduler(db.clone(), dirty.clone(), paths.default_backup_dir.clone());
             app.manage(AppState { db, clock: Clock::System, session: RwLock::new(None), paths, dirty });
+
+            // One scale for the whole app: no pinch or Ctrl + wheel zoom (see webview.rs).
+            if let Some(window) = app.get_webview_window("main") {
+                webview::lock_zoom(&window);
+            }
 
             // Safety net: show the window even if the UI never reports ready.
             let handle = app.handle().clone();

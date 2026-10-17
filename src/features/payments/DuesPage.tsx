@@ -164,7 +164,8 @@ export function DuesPage() {
                     <TH>Phone</TH>
                     <TH className="text-right">Due</TH>
                     <TH>Unpaid since</TH>
-                    <TH>Last payment</TH>
+                    {/* Secondary on small windows, so the row's buttons always fit. */}
+                    <TH className="hidden xl:table-cell">Last payment</TH>
                     <TH>Membership</TH>
                     <TH />
                   </tr>
@@ -195,7 +196,7 @@ export function DuesPage() {
                           {d.ageDays === 0 ? "Today" : `${plural(d.ageDays, "day")} ago`}
                         </div>
                       </TD>
-                      <TD className="text-muted-foreground text-sm">
+                      <TD className="hidden text-muted-foreground text-sm xl:table-cell">
                         {d.lastPaymentAt ? timeAgo(d.lastPaymentAt) : "Never"}
                       </TD>
                       <TD>
