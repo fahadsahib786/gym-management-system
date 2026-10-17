@@ -158,6 +158,10 @@ pub struct AppStatus {
     pub clock_warning: Option<String>,
     pub schema_version: i64,
     pub member_count: i64,
+    /// The owner has a recovery key for a forgotten PIN.
+    pub recovery_key_exists: bool,
+    /// This build can reset the owner PIN with an unlock code from the software provider (set by the shell).
+    pub support_unlock: bool,
 }
 
 /// Detects a PC clock that runs behind the data (dead CMOS battery or tampering).
@@ -198,6 +202,8 @@ pub fn status(conn: &Connection, clock: &Clock) -> CoreResult<AppStatus> {
         clock_warning: clock_warning(conn, clock)?,
         schema_version: db::schema_version(conn)?,
         member_count: conn.query_row("SELECT COUNT(*) FROM members WHERE deleted_at IS NULL", [], |r| r.get(0))?,
+        recovery_key_exists: crate::recovery::status(conn)?.exists,
+        support_unlock: false,
     })
 }
 

@@ -38,6 +38,17 @@ export const api = {
     logout: () => call<void>("auth_logout"),
     session: () => call<B.Actor | null>("auth_session"),
     changePin: (currentPin: string, newPin: string) => call<void>("auth_change_pin", { currentPin, newPin }),
+    /** Owner recovery key for a forgotten PIN (see crates/core/src/recovery.rs). */
+    recoveryStatus: () => call<B.RecoveryStatus>("auth_recovery_status"),
+    createRecoveryKey: () => call<string>("auth_create_recovery_key"),
+    /** Login screen, no session. Returns the replacement recovery key. */
+    resetPinWithKey: (userId: string, key: string, newPin: string) =>
+      call<string>("auth_reset_pin_with_key", { userId, key, newPin }),
+    /** Lost key: the code the owner reads out to the software provider (same one for a day). */
+    supportCode: () => call<string>("auth_support_code"),
+    /** With the provider's unlock code. Returns a new recovery key. */
+    resetPinWithSupport: (userId: string, unlockCode: string, newPin: string) =>
+      call<string>("auth_reset_pin_with_support", { userId, unlockCode, newPin }),
   },
   users: {
     list: (includeInactive = true) => call<B.UserSummary[]>("users_list", { includeInactive }),
@@ -68,7 +79,8 @@ export const api = {
     archive: (id: string, reason?: string | null) =>
       call<void>("members_archive", { id, reason: reason || null }),
     restore: (id: string) => call<void>("members_restore", { id }),
-    remove: (id: string) => call<void>("members_delete", { id }),
+    deletePreview: (id: string) => call<B.MemberDeletePreview>("members_delete_preview", { id }),
+    remove: (id: string, reason: string) => call<void>("members_delete", { id, reason }),
     setPhoto: (id: string, photo: B.PhotoInput) => call<number>("members_set_photo", { id, photo }),
     removePhoto: (id: string) => call<void>("members_remove_photo", { id }),
     duplicates: (query: B.DuplicateQuery) => call<B.MemberQuick[]>("members_duplicates", { query }),
@@ -94,10 +106,12 @@ export const api = {
     receipt: (id: string) => call<B.Receipt>("payments_receipt", { id }),
     invoice: (memberId: string) => call<B.FeeInvoice>("billing_invoice", { memberId }),
     void: (id: string, reason: string) => call<void>("payments_void", { id, reason }),
+    remove: (id: string, reason: string) => call<void>("payments_delete", { id, reason }),
   },
   charges: {
     add: (input: B.ChargeInput) => call<B.ChargeResult>("charges_add", { input }),
     void: (id: string, reason: string) => call<void>("charges_void", { id, reason }),
+    remove: (id: string, reason: string) => call<void>("charges_delete", { id, reason }),
     list: (memberId: string) => call<B.ChargeRow[]>("charges_list", { memberId }),
   },
   ledger: {

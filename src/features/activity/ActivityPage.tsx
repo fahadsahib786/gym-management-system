@@ -35,8 +35,10 @@ const LABELS: Record<string, string> = {
   "attendance.delete": "Check-in removed",
   "auth.lockout": "Locked out",
   "auth.login": "Login",
+  "auth.recovery_lockout": "Recovery locked",
   "backup.restore": "Backup restored",
   "charge.create": "Charge added",
+  "charge.delete": "Charge deleted",
   "charge.void": "Charge voided",
   "data.export": "Export",
   "expense.create": "Expense added",
@@ -59,6 +61,7 @@ const LABELS: Record<string, string> = {
   "membership.renew": "Renewal",
   "membership.unfreeze": "Freeze ended",
   "payment.create": "Payment",
+  "payment.delete": "Receipt deleted",
   "payment.void": "Receipt voided",
   "plan.create": "Plan added",
   "plan.delete": "Plan deleted",
@@ -67,6 +70,7 @@ const LABELS: Record<string, string> = {
   "system.setup": "First setup",
   "user.change_pin": "PIN changed",
   "user.create": "User added",
+  "user.recovery_key": "Recovery key",
   "user.reset_pin": "PIN reset",
   "user.update": "User edited",
 };
@@ -83,7 +87,7 @@ function tone(action: string): BadgeVariant {
     action.endsWith(".void") ||
     action.endsWith(".delete") ||
     action.endsWith(".cancel") ||
-    action === "auth.lockout"
+    action.endsWith("lockout")
   )
     return "danger";
   if (action.startsWith("payment.") || action.startsWith("charge.")) return "success";

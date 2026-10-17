@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { save } from "@tauri-apps/plugin-dialog";
-import { Ban, Download, MessageCircle, Printer, RefreshCw, Wallet } from "lucide-react";
+import { Ban, Download, MessageCircle, Printer, RefreshCw, Trash, Wallet } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
@@ -26,6 +26,7 @@ import { whatsappForReceipt } from "./followups";
 export function PaymentsPage() {
   const settings = useSettings();
   const canVoid = useCan("voidPayments");
+  const canDelete = useCan("deletePayments");
   const canExport = useCan("exportData");
   const canRevenue = useCan("viewRevenue");
   const canUsers = useCan("manageUsers");
@@ -36,6 +37,7 @@ export function PaymentsPage() {
   const [includeVoided, setIncludeVoided] = useState(true);
   const [page, setPage] = useState(1);
   const [voiding, setVoiding] = useState<PaymentRow | null>(null);
+  const [deleting, setDeleting] = useState<PaymentRow | null>(null);
   const q = useDebounce(search.trim(), 160);
   const users = useQuery({
     queryKey: ["users", true],
@@ -294,6 +296,17 @@ export function PaymentsPage() {
                             <Ban />
                           </Button>
                         )}
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            title="Delete permanently"
+                            aria-label="Delete permanently"
+                            onClick={() => setDeleting(p)}
+                          >
+                            <Trash />
+                          </Button>
+                        )}
                       </TD>
                     </TR>
                   ))}
@@ -317,6 +330,29 @@ export function PaymentsPage() {
           try {
             await api.payments.void(voiding.id, reason);
             toast.success("Payment voided");
+          } catch (e) {
+            toast.error(errorMessage(e));
+            throw e;
+          }
+        }}
+      />
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(o) => !o && setDeleting(null)}
+        title={`Delete receipt ${deleting?.receiptNo ?? ""} permanently?`}
+        description={
+          deleting?.voidedAt
+            ? `This void receipt (${money(deleting.amount)} from ${deleting.memberName}) will be removed from every list. The activity log keeps a record.`
+            : `${deleting ? money(deleting.amount) : ""} from ${deleting?.memberName ?? ""} will be removed completely: it leaves collections and reports, and the member owes this amount again. To keep it visible as cancelled, use Void instead. The activity log keeps a record.`
+        }
+        confirmLabel="Delete forever"
+        destructive
+        requireReason
+        onConfirm={async (reason) => {
+          if (!deleting) return;
+          try {
+            await api.payments.remove(deleting.id, reason);
+            toast.success("Payment deleted");
           } catch (e) {
             toast.error(errorMessage(e));
             throw e;

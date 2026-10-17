@@ -1,11 +1,14 @@
 import { ArrowLeft, Delete, Dumbbell, LockKeyhole, ShieldCheck } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { lazy, type ReactNode, Suspense, useCallback, useEffect, useState } from "react";
 import type { Actor, AppStatus, UserSummary } from "@/api/bindings";
 import { api } from "@/api/client";
 import { errorMessage } from "@/api/errors";
 import { Button } from "@/components/ui/button";
 import { initials, timeAgo } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+// Loaded on first use: it brings the print/PDF code, which the login screen otherwise never needs.
+const ForgotPinDialog = lazy(() => import("./recovery").then((m) => ({ default: m.ForgotPinDialog })));
 
 export function BrandPanel({
   gymName,
@@ -92,6 +95,7 @@ export function LoginScreen({ status, onLogin }: { status: AppStatus; onLogin: (
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
 
   // PIN turned off in settings: the owner account opens the app directly.
   useEffect(() => {
@@ -118,7 +122,8 @@ export function LoginScreen({ status, onLogin }: { status: AppStatus; onLogin: (
   }, [selected, pin, busy, onLogin]);
 
   useEffect(() => {
-    if (!selected) return;
+    // The PIN pad listens to the whole window — but not while the "Forgot PIN?" form is open.
+    if (!selected || forgotOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (/^\d$/.test(e.key)) setPin((p) => (p.length < 8 ? p + e.key : p));
       else if (e.key === "Backspace") setPin((p) => p.slice(0, -1));
@@ -130,7 +135,7 @@ export function LoginScreen({ status, onLogin }: { status: AppStatus; onLogin: (
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selected, submit, users.length]);
+  }, [selected, submit, users.length, forgotOpen]);
 
   return (
     <div className="flex h-screen bg-background">
@@ -235,6 +240,19 @@ export function LoginScreen({ status, onLogin }: { status: AppStatus; onLogin: (
               >
                 Unlock
               </Button>
+              {selected.role === "admin" ? (
+                <Button
+                  variant="link"
+                  className="mt-1 w-full text-muted-foreground"
+                  onClick={() => setForgotOpen(true)}
+                >
+                  Forgot PIN?
+                </Button>
+              ) : (
+                <p className="mt-3 text-center text-muted-foreground text-xs">
+                  Forgot your PIN? Ask the owner to reset it.
+                </p>
+              )}
               {users.length > 1 && (
                 <Button
                   variant="ghost"
@@ -255,6 +273,21 @@ export function LoginScreen({ status, onLogin }: { status: AppStatus; onLogin: (
           </p>
         </div>
       </div>
+      {forgotOpen && (
+        <Suspense fallback={null}>
+          <ForgotPinDialog
+            status={status}
+            userId={selected?.id}
+            onOpenChange={(open) => {
+              setForgotOpen(open);
+              if (!open) {
+                setPin("");
+                setError(null);
+              }
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

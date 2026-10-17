@@ -248,7 +248,7 @@ pub fn record_payment(conn: &mut Connection, actor: &Actor, clock: &Clock, input
     Ok(result)
 }
 
-fn require_reason(reason: &str) -> CoreResult<String> {
+pub(crate) fn require_reason(reason: &str) -> CoreResult<String> {
     let r = reason.trim();
     if r.chars().count() < 3 {
         return Err(CoreError::validation("reason", "Please write a short reason"));
@@ -289,6 +289,94 @@ pub fn void_payment(conn: &mut Connection, actor: &Actor, clock: &Clock, payment
         Some(payment_id),
         format!("Voided receipt {receipt_no} ({}) of {name} ({code}): {reason}", format_money(&settings.billing.currency, amount)),
         Some(serde_json::json!({ "memberId": member_id, "receiptNo": receipt_no, "amount": amount })),
+    )?;
+    tx.commit()?;
+    Ok(())
+}
+
+/// Deletes a payment for good (admin). Unlike a void, the receipt disappears from every list and report; the
+/// activity log keeps its full details. A payment that was not void raises the member's balance by its amount.
+pub fn delete_payment(conn: &mut Connection, actor: &Actor, clock: &Clock, payment_id: &str, reason: &str) -> CoreResult<()> {
+    actor.require(Permission::DeletePayments)?;
+    let reason = require_reason(reason)?;
+    let tx = db::write_tx(conn)?;
+    let settings = settings::load(&tx)?;
+    let (member_id, receipt_no, amount, method, paid_at, voided): (String, String, i64, String, String, Option<String>) = tx
+        .query_row(
+            "SELECT member_id, receipt_no, amount, method, paid_at, voided_at FROM payments WHERE id = ?1",
+            [payment_id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)),
+        )
+        .optional()?
+        .ok_or_else(|| CoreError::not_found("Payment"))?;
+    db::with_delete_permit(&tx, |c| Ok(c.execute("DELETE FROM payments WHERE id = ?1", [payment_id])?))?;
+    summary::refresh_member(&tx, &member_id)?;
+    let (name, code) = member_label(&tx, &member_id)?;
+    let when = parse_ts(&paid_at).map(|t| crate::clock::human_date(t.date())).unwrap_or_else(|| paid_at.clone());
+    audit::record(
+        &tx,
+        actor,
+        clock,
+        "payment.delete",
+        Some("payment"),
+        Some(payment_id),
+        format!(
+            "Deleted receipt {receipt_no} ({}, {method}, {when}) of {name} ({code}) permanently{}: {reason}",
+            format_money(&settings.billing.currency, amount),
+            if voided.is_some() { ", it was already void" } else { "" }
+        ),
+        Some(serde_json::json!({
+            "memberId": member_id, "receiptNo": receipt_no, "amount": amount, "method": method,
+            "paidAt": paid_at, "wasVoid": voided.is_some()
+        })),
+    )?;
+    tx.commit()?;
+    Ok(())
+}
+
+/// Deletes a charge for good (admin), with the same rule as voiding: an active membership's fee goes by
+/// cancelling the membership.
+pub fn delete_charge(conn: &mut Connection, actor: &Actor, clock: &Clock, charge_id: &str, reason: &str) -> CoreResult<()> {
+    actor.require(Permission::DeletePayments)?;
+    let reason = require_reason(reason)?;
+    let tx = db::write_tx(conn)?;
+    let settings = settings::load(&tx)?;
+    let (member_id, kind, description, net, charge_date, voided, sub_cancelled): (
+        String,
+        ChargeKind,
+        String,
+        i64,
+        String,
+        Option<String>,
+        Option<String>,
+    ) = tx
+        .query_row(
+            "SELECT c.member_id, c.kind, c.description, c.net_amount, c.charge_date, c.voided_at, s.cancelled_at
+             FROM charges c LEFT JOIN subscriptions s ON s.id = c.subscription_id WHERE c.id = ?1",
+            [charge_id],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?)),
+        )
+        .optional()?
+        .ok_or_else(|| CoreError::not_found("Charge"))?;
+    if kind == ChargeKind::Membership && voided.is_none() && sub_cancelled.is_none() {
+        return Err(CoreError::conflict("To remove a membership fee, cancel the membership first."));
+    }
+    db::with_delete_permit(&tx, |c| Ok(c.execute("DELETE FROM charges WHERE id = ?1", [charge_id])?))?;
+    summary::refresh_member(&tx, &member_id)?;
+    let (name, code) = member_label(&tx, &member_id)?;
+    audit::record(
+        &tx,
+        actor,
+        clock,
+        "charge.delete",
+        Some("charge"),
+        Some(charge_id),
+        format!(
+            "Deleted {description} ({}) of {name} ({code}) permanently{}: {reason}",
+            format_money(&settings.billing.currency, net),
+            if voided.is_some() { ", it was already void" } else { "" }
+        ),
+        Some(serde_json::json!({ "memberId": member_id, "amount": net, "chargeDate": charge_date, "wasVoid": voided.is_some() })),
     )?;
     tx.commit()?;
     Ok(())

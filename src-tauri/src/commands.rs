@@ -8,8 +8,8 @@ use danish_core::backup::{self, BackupKind};
 use danish_core::model::{MemberQuick, Page};
 use danish_core::settings::{MessageTemplates, Settings, SettingsUpdate, TemplateLanguage, WhatsappOpenWith};
 use danish_core::{
-    attendance, audit, auth, billing, expenses, export, measurements, members, memberships, messages, plans, seed, settings, stats,
-    summary, system,
+    attendance, audit, auth, billing, expenses, export, measurements, members, memberships, messages, plans, recovery, seed, settings,
+    stats, summary, system,
 };
 use danish_core::{Actor, CoreError, CoreResult, Permission};
 use serde::Serialize;
@@ -41,9 +41,14 @@ pub struct AppInfo {
     pub schema_version: i64,
 }
 
+/// The software provider's secret for support unlock codes, baked in by build.rs (absent in builds without it).
+const SUPPORT_SECRET: Option<&str> = option_env!("DANISH_SUPPORT_SECRET");
+
 #[tauri::command]
 pub async fn app_status(state: State<'_, AppState>) -> R<system::AppStatus> {
-    state.open(|c, clock| system::status(c, clock)).await
+    let mut status = state.open(|c, clock| system::status(c, clock)).await?;
+    status.support_unlock = SUPPORT_SECRET.is_some();
+    Ok(status)
 }
 
 /// Called by the UI after its first paint so the window appears without a white flash.
@@ -359,8 +364,13 @@ pub async fn members_restore(state: State<'_, AppState>, id: String) -> R<()> {
 }
 
 #[tauri::command]
-pub async fn members_delete(state: State<'_, AppState>, id: String) -> R<()> {
-    state.write(move |c, clock, actor| members::delete(c, actor, clock, &id)).await
+pub async fn members_delete_preview(state: State<'_, AppState>, id: String) -> R<members::MemberDeletePreview> {
+    state.read(move |c, _, _| members::delete_preview(c, &id)).await
+}
+
+#[tauri::command]
+pub async fn members_delete(state: State<'_, AppState>, id: String, reason: String) -> R<()> {
+    state.write(move |c, clock, actor| members::delete(c, actor, clock, &id, &reason)).await
 }
 
 #[tauri::command]
@@ -769,6 +779,65 @@ pub async fn open_folder(app: AppHandle, state: State<'_, AppState>, which: Stri
     app.opener()
         .open_path(path.to_string_lossy(), None::<&str>)
         .map_err(|e| CoreError::other(format!("Could not open the folder: {e}")))
+}
+
+/// Permanently deletes a payment (admin; recorded in the activity log).
+#[tauri::command]
+pub async fn payments_delete(state: State<'_, AppState>, id: String, reason: String) -> R<()> {
+    state.write(move |c, clock, actor| billing::delete_payment(c, actor, clock, &id, &reason)).await
+}
+
+/// Permanently deletes a charge (admin; recorded in the activity log).
+#[tauri::command]
+pub async fn charges_delete(state: State<'_, AppState>, id: String, reason: String) -> R<()> {
+    state.write(move |c, clock, actor| billing::delete_charge(c, actor, clock, &id, &reason)).await
+}
+
+/// Whether the owner has a recovery key (for Settings).
+#[tauri::command]
+pub async fn auth_recovery_status(state: State<'_, AppState>) -> R<recovery::RecoveryStatus> {
+    state.read(|c, _, _| recovery::status(c)).await
+}
+
+/// Creates or replaces the owner recovery key; returns it once, to be written down.
+#[tauri::command]
+pub async fn auth_create_recovery_key(state: State<'_, AppState>) -> R<String> {
+    state.write(|c, clock, actor| recovery::create_key(c, actor, clock)).await
+}
+
+/// Login screen, no session: new PIN for an admin with the recovery key. Returns the replacement key.
+#[tauri::command]
+pub async fn auth_reset_pin_with_key(state: State<'_, AppState>, user_id: String, key: String, new_pin: String) -> R<String> {
+    let new_key = state.open(move |c, clock| recovery::reset_pin_with_key(c, clock, &user_id, &key, &new_pin)).await?;
+    state.dirty.store(true, Ordering::SeqCst);
+    Ok(new_key)
+}
+
+fn support_secret() -> R<&'static str> {
+    SUPPORT_SECRET.ok_or_else(|| CoreError::conflict("Support unlock codes are not available in this version."))
+}
+
+/// Login screen, no session: the support code the owner reads out to the software provider.
+#[tauri::command]
+pub async fn auth_support_code(state: State<'_, AppState>) -> R<String> {
+    support_secret()?;
+    state.open(recovery::support_code).await
+}
+
+/// Login screen, no session: new admin PIN with the provider's unlock code. Returns the new recovery key.
+#[tauri::command]
+pub async fn auth_reset_pin_with_support(
+    state: State<'_, AppState>,
+    user_id: String,
+    unlock_code: String,
+    new_pin: String,
+) -> R<String> {
+    let secret = support_secret()?;
+    let new_key = state
+        .open(move |c, clock| recovery::reset_pin_with_support_code(c, clock, secret.as_bytes(), &user_id, &unlock_code, &new_pin))
+        .await?;
+    state.dirty.store(true, Ordering::SeqCst);
+    Ok(new_key)
 }
 
 /// Saves what is in the print view (a receipt, invoice, member cards or a report) as a PDF file.

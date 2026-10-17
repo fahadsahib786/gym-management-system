@@ -1,6 +1,6 @@
 # Danish Fitness — System Architecture
 
-Version 1.0 · October 2026
+Version 1.1 · October 2026
 
 ---
 
@@ -10,7 +10,7 @@ Version 1.0 · October 2026
 |---|---|
 | Runs on **any Windows 10/11 PC**, offline by default | Tauri 2 desktop app (WebView2), single-file SQLite database, per-user installer that needs no admin rights |
 | Very fast and lightweight on low-spec PCs (4 GB RAM, Celeron/i3, HDD, 1366×768) | Rust backend, ~6 MB installer, ~60–120 MB RAM, indexed SQL, one IPC call per screen, code-split UI |
-| Easy for non-technical staff | Large controls, plain language, colour-coded statuses, smart defaults, keyboard shortcuts, PIN login, undo-safe flows (void instead of delete) |
+| Easy for non-technical staff | Large controls, plain language, colour-coded statuses, smart defaults, keyboard shortcuts, PIN login, undo-safe flows (void first; permanent delete only by the owner, with a reason) |
 | Manual registration and fee records | Registration bundle (member + membership + admission fee + payment) in one atomic transaction |
 | Very detailed statistics | Dashboard + 7 reports computed in Rust from a proper ledger (charges vs payments), attendance and expenses |
 | Flexible to go online later | UUIDv7 keys, `updated_at`/soft-delete on all mutable rows, all logic in a UI-independent Rust crate, transport-agnostic RPC API |
@@ -115,11 +115,20 @@ Money is **INTEGER rupees**. Dates are `YYYY-MM-DD`; timestamps are local `YYYY-
 | `measurements` | Body progress | weight, height, body fat, chest, waist, hips, arm, thigh |
 | `message_log` | WhatsApp messages opened | member_id, template, phone, body |
 | `audit_log` | Who did what (append-only, enforced by triggers) | at, user, action, entity, entity_id, summary, details |
+| `delete_permit` | One row; `active = 1` only inside an owner's permanent-delete transaction | id (= 1), active |
 | `member_stats` | Derived per-member summary (recomputed, never hand-edited) | end_date, plan_name, balance, total_paid, last_payment_at, last_visit_at, visit_count, freeze window |
 
 Integrity rules enforced **in the database**:
-- `payments` and `audit_log` cannot be deleted (triggers); financial corrections are **voids with a reason**.
-- Members referenced by money rows cannot be deleted (`ON DELETE RESTRICT`); they are **archived**.
+- `audit_log` can never be edited or deleted (triggers).
+- `payments` and `charges` cannot be deleted (triggers) — everyday corrections are **voids with a reason**. The one
+  exception is the owner's **permanent delete** (migration `0002`): `db::with_delete_permit` sets
+  `delete_permit.active = 1` inside the same `BEGIN IMMEDIATE` transaction, deletes, and resets it before commit, so
+  no other connection ever sees the permit open. The core first checks `DeletePayments` / `DeleteMembers` and a
+  reason, then writes an audit row with a JSON snapshot of what was removed. A membership's fee can only be deleted
+  once the membership is cancelled, so subscriptions and their charges always match.
+- Members referenced by money rows cannot be deleted by accident (`ON DELETE RESTRICT`); normally they are
+  **archived**. A permanent member delete removes their payments, charges, freezes and subscriptions under the
+  permit; attendance, measurements, messages, photo and stats go by `ON DELETE CASCADE`.
 - `CHECK` constraints on enums, positive amounts, `discount ≤ amount`, `end_date ≥ start_date`.
 
 `member_stats` is refreshed for the affected member **inside the same transaction** as every mutation
@@ -171,10 +180,27 @@ Receipts `R-000001`, strictly sequential and never reused; voided receipts stay 
 
 - Staff log in by tapping their name and entering a **PIN** (argon2id hash; 5 wrong tries → 30 s lockout).
 - Roles: **Admin/Owner** (everything) and **Receptionist** (registration, renewals, payments, check-in, members).
-  Receptionists cannot void, edit dates, see expenses/profit (unless the owner enables it), manage users, change
-  settings or restore backups.
+  Receptionists cannot void, delete, edit dates, see expenses/profit (unless the owner enables it), manage users,
+  change settings or restore backups.
 - Permissions are enforced **in Rust** (the UI only hides what you cannot do).
-- Every financial or administrative action writes an immutable audit row with the user's name.
+- Every financial or administrative action writes an immutable audit row with the user's name — permanent deletes
+  included, with a snapshot of the deleted rows.
+- **Forgotten owner PIN** (`recovery.rs`):
+  - *Recovery key* — 20 symbols from a 31-letter alphabet without look-alikes (~99 bits), offered right after setup
+    (and from Settings and a dashboard banner until one exists), shown once and stored only as an Argon2id hash in
+    `settings.recovery`. On the login screen it sets a new PIN for an active admin, is used up, and a new key is
+    issued. 5 wrong keys lock recovery for 10 minutes (logged).
+  - *Support unlock* — for a lost key. The login screen shows a 10-symbol support code (random, kept for 24 h in
+    `settings.support_unlock` so the owner can call back). The provider runs `npm run support:unlock -- <code>`,
+    which returns the first 64 bits of `HMAC-SHA256(secret, "danish-fitness:pin-reset:v1:" ‖ code)` written as 10
+    symbols. The owner types it with a new PIN; the code is used up and a new recovery key is issued. Same lockout.
+  - The support secret is baked in at build time by `src-tauri/build.rs` from `DANISH_SUPPORT_SECRET` or
+    `%USERPROFILE%\.danish-fitness\support-secret.txt` (created by `npm run support:unlock -- --init`). It is never
+    committed — the repository is public, so nothing secret may live in it. Builds without it print a warning and
+    offer only the recovery key. Installed copies accept only codes made with the secret they were built with, so
+    the provider must keep a backup of it.
+  - Threat model: PINs and recovery protect the app against staff. The database file is not encrypted; anyone with
+    the PC's files and SQLite skills can read it, so the Windows account itself should have a password.
 - Tauri capabilities grant the webview only what it needs; strict CSP; external URLs opened from Rust after
   validation (WhatsApp links only).
 - Camera: `Builder::on_permission_request` grants **only** the camera, and only to the app's own bundled pages
@@ -236,7 +262,7 @@ prefix or be assigned by the server. IDs never change, so this is a display conc
 
 | Level | Tooling | What |
 |---|---|---|
-| Core unit/integration | `cargo test -p danish-core` (in-memory SQLite, fixed clock) | date maths, statuses, renewals, freezes, balances, receipts, voids, permissions, stats, backup/restore round-trip |
+| Core unit/integration | `cargo test -p danish-core` (in-memory SQLite, fixed clock) | date maths, statuses, renewals, freezes, balances, receipts, voids, permanent deletes, recovery keys and unlock codes, permissions, stats, backup/restore round-trip |
 | Frontend unit | Vitest + Testing Library | phone/CNIC normalisation, money/date formatting, template rendering, form schemas |
 | Performance | seeded DB (3k members, 40k payments, 150k check-ins) | query timings asserted in tests |
 | End-to-end smoke | Playwright over WebView2 CDP against the real app | setup → register → pay → check-in → dashboard → backup |

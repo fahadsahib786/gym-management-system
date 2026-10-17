@@ -39,13 +39,14 @@ The complete staff manual, with a screenshot for every step, is in **[docs/USER_
 | **Attendance** | Works with **no machine** (F4, type a name, phone or ID, Enter) or with a cheap USB barcode scanner and printed **member cards**. Can be switched off completely. |
 | **WhatsApp** | One click opens WhatsApp with the message typed (English or Roman Urdu templates); ready lists for expiring, expired, fee due, birthdays and members who stopped coming. No paid API. |
 | **Dashboard & reports** | Live KPIs with trends, revenue vs expenses, busy hours, demographics; daily closing (cash drawer), collections, memberships, attendance, expenses and profit & loss — printable, PDF, Excel. |
-| **Control** | Staff accounts with PIN and roles, an activity log that cannot be edited, voids with reasons instead of deletes. |
+| **Control** | Staff accounts with PIN and roles, an activity log that cannot be edited, voids with reasons — and owner-only permanent deletes of members, payments and fees, each logged with a snapshot. |
+| **Forgotten PIN** | An owner recovery key (printed at setup) resets the owner PIN from the login screen; a lost key is replaced by a one-time unlock code from the developer. |
 | **Safety** | Survives power cuts; automatic backups to a second drive (D:) and USB; "before update" and "before uninstall" copies; one-click restore on a new PC. |
 | **Fast and light** | ~6 MB installer, opens in about a second, dashboard in < 100 ms with 3,000 members. |
 
 ## Install
 
-1. Download **`Danish Fitness_1.0.0_x64-setup.exe`** from the [Releases](../../releases) page
+1. Download **`Danish Fitness_1.1.0_x64-setup.exe`** from the [Releases](../../releases) page
    (or [build it yourself](#for-developers)).
 2. Double-click it. If Windows shows *"Windows protected your PC"*, click **More info → Run anyway**
    (shown for new software without a paid code-signing certificate).
@@ -69,7 +70,7 @@ finds, or <b>Choose backup file…</b> — everything comes back.</td>
 </tr>
 <tr>
 <td><img src="docs/screenshots/03-setup-owner.png" alt="Owner account" /><br/>
-<b>3. Owner account.</b> Your name and a 4–8 digit <b>PIN</b>. Write the owner PIN down somewhere safe.</td>
+<b>3. Owner account.</b> Your name and a 4–8 digit <b>PIN</b>.</td>
 <td><img src="docs/screenshots/04-setup-plans.png" alt="Fees and plans" /><br/>
 <b>4. Fees & plans.</b> Admission fee and packages (Monthly, Quarterly, Half-yearly, Yearly, Daily pass) —
 change the prices to yours.</td>
@@ -78,9 +79,17 @@ change the prices to yours.</td>
 <td><img src="docs/screenshots/05-setup-finish.png" alt="Finish and backup folder" /><br/>
 <b>5. Finish.</b> Check the summary. The backup folder is chosen automatically — a second drive such as
 <code>D:\Danish Fitness\Backups</code> when the PC has one. Click <b>Open Danish Fitness</b>.</td>
+<td><img src="docs/screenshots/05b-recovery-key.png" alt="Owner recovery key" /><br/>
+<b>6. Recovery key.</b> Click <b>Create recovery key</b> and print it (or write it down). Keep it at home: it
+resets the owner PIN if it is ever forgotten.</td>
+</tr>
+<tr>
 <td><img src="docs/screenshots/06-login.png" alt="Login" /><br/>
-<b>6. Log in.</b> Type your PIN (tap your name first when there are several staff). Add receptionists in
+<b>7. Log in.</b> Type your PIN (tap your name first when there are several staff). Add receptionists in
 <b>Settings → Users & security</b> so the activity log shows who did what.</td>
+<td><img src="docs/screenshots/35-forgot-pin.png" alt="Forgot PIN" /><br/>
+<b>Forgot the owner PIN?</b> <b>Forgot PIN?</b> on the login screen → type the recovery key → new PIN. Lost the
+key? <b>Lost the key?</b> shows a support code; the developer gives back a one-time unlock code.</td>
 </tr>
 </table>
 
@@ -130,6 +139,8 @@ Every document can be **printed** or **saved as a PDF** (to send on WhatsApp, e-
 | **New version** | Run the new installer over the old one. Data is untouched; a **"Before update"** backup is taken automatically on first start. |
 | **Uninstall & reinstall** | Data stays on the PC. Even if *"Delete the application data"* is ticked, the uninstaller first saves a copy in `Documents\Danish Fitness\Backups`. |
 | **New PC / Windows reinstalled** | Install, then click **Restore** on the first screen (or pick the backup from the D: drive / USB). Log in with the same PIN. |
+| **Forgotten owner PIN** | **Forgot PIN?** with the recovery key from setup. Lost key: a one-time unlock code from the developer. Nothing is lost either way. |
+| **Wrong entries** | Void with a reason (stays visible), or — owner only — delete permanently with a reason; the activity log keeps a snapshot. |
 
 All of this was tested with the real installer: install → update → uninstall → wipe → reinstall → restore.
 
@@ -143,6 +154,7 @@ All of this was tested with the real installer: install → update → uninstall
 | <img src="docs/screenshots/27-report-memberships.png" alt="Memberships report" /> Memberships & renewal rate | <img src="docs/screenshots/28-report-profit-loss.png" alt="Profit and loss" /> Profit & loss |
 | <img src="docs/screenshots/24-expenses.png" alt="Expenses" /> Expenses by category | <img src="docs/screenshots/31-settings-backup.png" alt="Backups" /> Backups & restore |
 | <img src="docs/screenshots/30-settings-whatsapp.png" alt="WhatsApp templates" /> WhatsApp templates with live preview | <img src="docs/screenshots/32-activity-log.png" alt="Activity log" /> Activity log (who did what) |
+| <img src="docs/screenshots/33-delete-payment.png" alt="Delete a payment" /> Owner: delete a payment permanently, with a reason | <img src="docs/screenshots/34-delete-member.png" alt="Delete a member" /> Owner: delete a member and all their records |
 
 ## For developers
 
@@ -178,9 +190,11 @@ npm run app:build        # release build + installer → target/release/bundle/n
 | `node e2e/smoke.mjs` | End-to-end test against the running app (see the file header) |
 | `node e2e/docs-screenshots.mjs` | Regenerate the screenshots in `docs/screenshots/` |
 | `npm run docs:pdf` | Build `docs/Danish Fitness - User Guide.pdf` from the user guide (cover, quick start, screenshots) to send to the gym |
+| `npm run support:unlock -- ABCDE-FGHJK` | Turn a gym's support code into the unlock code for a forgotten owner PIN ([below](#support-secret)) |
 
 Environment variables: `DANISH_FITNESS_DATA_DIR` (portable/test data folder), `DF_PROFILE=1` (dashboard query
-timings), `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222` (lets the e2e scripts drive the app).
+timings), `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222` (lets the e2e scripts drive the app),
+`DANISH_SUPPORT_SECRET` (support secret, instead of the file below).
 
 ### Project structure
 
@@ -202,15 +216,33 @@ docs/                 USER_GUIDE.md (staff manual), ARCHITECTURE.md, PLAN.md, RE
 | Backups | Folder chosen at setup (suggested `D:\Danish Fitness\Backups`), else `Documents\Danish Fitness\Backups`, plus an optional second folder |
 | Logs | `%LOCALAPPDATA%\com.danishfitness.desk\logs` |
 
-Money is stored as whole rupees, dates as `YYYY-MM-DD`, timestamps in local time. Payments and the activity log
-cannot be deleted (database triggers); mistakes are voided with a reason. More in
+Money is stored as whole rupees, dates as `YYYY-MM-DD`, timestamps in local time. The activity log can never be
+changed. Payments and charges cannot be deleted either (database triggers) — except by the owner's permanent delete,
+which opens a one-row `delete_permit` only inside its own transaction and logs a snapshot. More in
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+### Support secret
+
+When a gym owner forgets the PIN **and** has lost the recovery key, **Forgot PIN? → Lost the key?** shows a
+support code such as `K7M2P-QX9TA`. Run `npm run support:unlock -- K7M2P-QX9TA` and read the unlock code back to
+them; it works once and gives them a new recovery key. An unlock code opens the owner account, so give it only to
+the owner (for example, call back on the owner's known number).
+
+The unlock code is an HMAC made with a secret that is **built into the app** and must never be committed (this
+repository is public):
+
+- Create it once on the PC that builds the installer: `npm run support:unlock -- --init` →
+  `%USERPROFILE%\.danish-fitness\support-secret.txt` (or set `DANISH_SUPPORT_SECRET`).
+- **Back it up** (e.g. in a password manager). An installed app only accepts codes made with the secret it was
+  built with; with a new secret, older installs fall back to the recovery key only.
+- A build without the secret prints `No support secret found` and the app offers only the recovery key.
 
 ### Release checklist
 
 1. Bump the version in `package.json`, `Cargo.toml` (workspace) and `src-tauri/tauri.conf.json`.
 2. `npm run lint && npm run typecheck && npm test && npm run test:rust`
-3. `npm run app:build` → `target/release/bundle/nsis/Danish Fitness_<version>_x64-setup.exe`
+3. `npm run app:build` → `target/release/bundle/nsis/Danish Fitness_<version>_x64-setup.exe` — check that the
+   build did **not** warn `No support secret found`.
 4. Publish the installer on the GitHub **Releases** page.
 
 ## Credits and license

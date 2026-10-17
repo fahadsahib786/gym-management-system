@@ -35,7 +35,7 @@ let transport: Transport = tauriTransport;
 
 /** Commands that only read data. Everything else changes data and refreshes what is on screen. */
 const READ_ONLY =
-  /^(app_(status|info|ready)|setup_defaults|auth_(session|logout)|settings_default_templates|open_folder|open_camera_settings|open_file|save_pdf|reveal_file|setup_find_backups|setup_inspect_backup)$|^(reports|dashboard)_|_(list|get|counts|quick|quick_search|find_by_code|duplicates|next_code|suggestions|preview|receipt|invoice|today|member_days|queue|status|inspect)$/;
+  /^(app_(status|info|ready)|setup_defaults|auth_(session|logout|support_code)|settings_default_templates|open_folder|open_camera_settings|open_file|save_pdf|reveal_file|setup_find_backups|setup_inspect_backup)$|^(reports|dashboard)_|_(list|get|counts|quick|quick_search|find_by_code|duplicates|next_code|suggestions|preview|receipt|invoice|today|member_days|queue|status|inspect)$/;
 
 let onWrite: (() => void) | null = null;
 

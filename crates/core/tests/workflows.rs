@@ -573,3 +573,62 @@ fn fee_invoice_lists_what_is_owed_and_the_current_membership() {
     assert_eq!((inv.total, inv.paid, inv.due, inv.balance), (3500, 3500, 0, 0));
     assert_eq!(inv.due_since, None);
 }
+
+#[test]
+fn owners_can_delete_payments_and_charges_for_good_staff_cannot() {
+    let mut g = gym();
+    let owner = g.owner.clone();
+    let c = clock("2026-10-02");
+    let id = register(&mut g, "2026-10-01", "Delete Payments", "03001234567", 3500).member_id;
+    let payment_id: String = g.conn.query_row("SELECT id FROM payments WHERE member_id = ?1", [&id], |r| r.get(0)).unwrap();
+
+    // The database itself still refuses a raw delete.
+    assert!(g.conn.execute("DELETE FROM payments WHERE id = ?1", [&payment_id]).is_err());
+
+    let user = auth::create_user(&mut g.conn, &owner, &c, NewUserInput { name: "Desk".into(), role: Role::Staff, pin: "2222".into() }).unwrap();
+    let staff = auth::refresh_actor(&g.conn, &user.id).unwrap();
+    assert!(matches!(billing::delete_payment(&mut g.conn, &staff, &c, &payment_id, "entered twice"), Err(CoreError::Forbidden)));
+    assert!(billing::delete_payment(&mut g.conn, &owner, &c, &payment_id, "").is_err(), "a reason is required");
+
+    billing::delete_payment(&mut g.conn, &owner, &c, &payment_id, "entered twice").unwrap();
+    let left: i64 = g.conn.query_row("SELECT COUNT(*) FROM payments WHERE member_id = ?1", [&id], |r| r.get(0)).unwrap();
+    assert_eq!(left, 0);
+    assert_eq!(members::get(&g.conn, &c, &id).unwrap().balance, 3500, "the member owes the fee again");
+    let logged: String = g.conn.query_row("SELECT summary FROM audit_log WHERE action = 'payment.delete'", [], |r| r.get(0)).unwrap();
+    assert!(logged.contains("R-000001") && logged.contains("entered twice"), "{logged}");
+    let permit: i64 = g.conn.query_row("SELECT active FROM delete_permit", [], |r| r.get(0)).unwrap();
+    assert_eq!(permit, 0, "the permit never outlives the delete");
+
+    // Charges: the admission fee can go; an active membership's fee needs the membership cancelled first.
+    let admission: String =
+        g.conn.query_row("SELECT id FROM charges WHERE member_id = ?1 AND kind = 'admission'", [&id], |r| r.get(0)).unwrap();
+    billing::delete_charge(&mut g.conn, &owner, &c, &admission, "waived").unwrap();
+    assert_eq!(members::get(&g.conn, &c, &id).unwrap().balance, 2500);
+    let fee: String = g.conn.query_row("SELECT id FROM charges WHERE member_id = ?1 AND kind = 'membership'", [&id], |r| r.get(0)).unwrap();
+    assert!(matches!(billing::delete_charge(&mut g.conn, &owner, &c, &fee, "test"), Err(CoreError::Conflict(_))));
+}
+
+#[test]
+fn owners_can_delete_a_member_with_history_completely() {
+    let mut g = gym();
+    let owner = g.owner.clone();
+    let c = clock("2026-10-02");
+    let id = register(&mut g, "2026-10-01", "Test Person", "03001234567", 3500).member_id;
+    let keep = register(&mut g, "2026-10-01", "Keep Me", "03007654321", 3500).member_id;
+    attendance::check_in(&mut g.conn, &owner, &c, attendance::CheckInInput { member_id: id.clone(), method: None }).unwrap();
+
+    let preview = members::delete_preview(&g.conn, &id).unwrap();
+    assert_eq!((preview.memberships, preview.payments, preview.payments_total, preview.check_ins), (1, 1, 3500, 1));
+    assert!(members::delete(&mut g.conn, &owner, &c, &id, "").is_err(), "a reason is required");
+
+    members::delete(&mut g.conn, &owner, &c, &id, "registered by mistake").unwrap();
+    assert!(members::get(&g.conn, &c, &id).is_err());
+    for table in ["payments", "charges", "subscriptions", "attendance", "member_stats"] {
+        let n: i64 = g.conn.query_row(&format!("SELECT COUNT(*) FROM {table} WHERE member_id = ?1"), [&id], |r| r.get(0)).unwrap();
+        assert_eq!(n, 0, "{table} rows left");
+    }
+    // Other members are untouched and the activity log keeps the record.
+    assert_eq!(members::get(&g.conn, &c, &keep).unwrap().total_paid, 3500);
+    let logged: String = g.conn.query_row("SELECT summary FROM audit_log WHERE action = 'member.delete'", [], |r| r.get(0)).unwrap();
+    assert!(logged.contains("Test Person") && logged.contains("registered by mistake"), "{logged}");
+}

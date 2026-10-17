@@ -16,7 +16,7 @@ import { useCan } from "@/stores/session";
 import { AboutSection, AppearanceSection } from "./sections/about";
 import { BackupSection } from "./sections/backup";
 import { GymSection, MembershipSection, PaymentsSection, SecuritySection } from "./sections/general";
-import { UsersSection } from "./sections/users";
+import { RecoveryKeyCard, UsersSection } from "./sections/users";
 import { WhatsappSection } from "./sections/whatsapp";
 
 const TABS = [
@@ -78,6 +78,7 @@ export function SettingsPage() {
               {tab === "users" && (
                 <div className="flex flex-col gap-5">
                   <UsersSection />
+                  <RecoveryKeyCard />
                   <SecuritySection settings={settings.data} />
                 </div>
               )}

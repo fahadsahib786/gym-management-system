@@ -30,7 +30,7 @@ For the owner and the front-desk staff. Everything works **without internet**. E
 
 ## 1. Install
 
-1. Double-click **`Danish Fitness_1.0.0_x64-setup.exe`**.
+1. Double-click **`Danish Fitness_1.1.0_x64-setup.exe`**.
 2. If Windows says *"Windows protected your PC"*, click **More info → Run anyway** (this appears for new software).
 3. It installs in a few seconds. A **Danish Fitness** icon appears on the desktop and in the Start menu.
 
@@ -54,7 +54,8 @@ are printed on receipts, invoices and member cards, and used in WhatsApp message
 
 ![Gym details](screenshots/02-setup-gym.png)
 
-**Step 3 — Owner account.** Your name and a **PIN** of 4–8 digits. Remember it — write the owner PIN somewhere safe.
+**Step 3 — Owner account.** Your name and a **PIN** of 4–8 digits. Remember it. If it is ever forgotten, the
+recovery key from the last step lets you set a new one.
 
 ![Owner account](screenshots/03-setup-owner.png)
 
@@ -68,6 +69,16 @@ drive, the app picks **`D:\Danish Fitness\Backups`** by itself (safe even if Win
 **Change folder** to choose another place, then **Open Danish Fitness**.
 
 ![Finish](screenshots/05-setup-finish.png)
+
+**Last — the recovery key.** As soon as the app opens it offers an **owner recovery key**, 20 letters and numbers.
+Click **Create recovery key**, then **Print** it (or write it down carefully) and tick **I have written down or
+printed this key**. Keep the paper at home, away from the computer. If the owner PIN is ever forgotten, this key
+sets a new one ([Forgot your PIN?](#forgot-your-pin)).
+
+![Recovery key](screenshots/05b-recovery-key.png)
+
+Clicked **Later**? The dashboard reminds the owner until a key exists. You can also create one any time in
+**Settings → Users & security**. Creating a new key makes the old paper stop working.
 
 > **Want to practise first?** On a spare PC: **Settings → Backup & restore → Load demo data** fills an empty gym with a
 > realistic year of members, payments and check-ins.
@@ -85,7 +96,28 @@ drive, the app picks **`D:\Danish Fitness\Backups`** by itself (safe even if Win
 | Role | Can do |
 |---|---|
 | **Receptionist** | Register members, take fees, renew, freeze, check-in, WhatsApp, print receipts, see today's collection |
-| **Owner / Admin** | Everything, plus money reports, expenses, corrections (void), settings, users, restore backups |
+| **Owner / Admin** | Everything, plus money reports, expenses, corrections (void and permanent delete), settings, users, restore backups |
+
+### Forgot your PIN?
+
+- **Receptionist:** the owner sets a new PIN in **Settings → Users & security → PIN**.
+- **Owner:** on the login screen click **Forgot PIN?**. Type the **recovery key** from your paper (small letters and
+  dashes don't matter), type the new PIN twice and click **Save new PIN**.
+
+![Forgot PIN](screenshots/35-forgot-pin.png)
+
+- The key works **once**. Straight after, the app shows a **new key**: print it or write it down, tick the box and
+  click **Done — log in**. Throw away the old paper.
+- 5 wrong keys block recovery for 10 minutes.
+
+**Lost the key, or never made one?** Click **Lost the key?** (when there is no key, the window opens this way by
+itself). It shows a **support code**. Call or WhatsApp **Fahad Baloch** and read it out, and you get an **unlock
+code** back. Type it, choose the new PIN and click **Save new PIN**. The window then shows a new recovery key to
+print. Nothing in the gym's data is lost.
+
+![Lost the key](screenshots/36-forgot-pin-support.png)
+
+The support code stays the same for a day, so you can close the window and call later.
 
 ## 4. The dashboard
 
@@ -240,7 +272,11 @@ group and timing, with the gym's name, address and phone, and a **barcode** for 
 
 ## 12. WhatsApp messages
 
-- Every **WhatsApp** button opens WhatsApp with the message already typed — check it and press **Send** in WhatsApp.
+- Every **WhatsApp** button first shows the message, which you can change, then **Open WhatsApp** opens it ready to
+  send — press **Send** in WhatsApp. **Copy** puts the text on the clipboard instead.
+
+![WhatsApp message](screenshots/23-whatsapp-message.png)
+
 - The **WhatsApp** page (left menu) has ready lists: *Expiring soon, Expired, Fee due, Birthdays, Not visiting*.
   It shows when each member was last reminded, so nobody is messaged twice by mistake.
 
@@ -308,7 +344,8 @@ everything as before. Even if someone ticks **"Delete the application data"** in
 is saved first in `Documents\Danish Fitness\Backups` (and in the backup folder) — marked "**Before uninstall**".
 
 **New PC, or Windows was reinstalled** — install the app, then on the first page click **Restore** next to the backup
-it finds on the D: drive, or **Choose backup file…** to pick one from a USB drive. Log in with the same PIN.
+it finds on the D: drive, or **Choose backup file…** to pick one from a USB drive. Log in with the same PIN (the
+recovery key that was valid when the backup was made works too).
 
 **Restore an older copy** — Settings → Backup & restore → choose a backup → **Restore** (owner only). The current data
 is saved first ("Before restore"), so a restore can always be undone.
@@ -325,19 +362,40 @@ period, the default admission fee, the "not visiting" days, and whether to **rec
 
 ## 17. Fixing mistakes and the activity log
 
-Nothing about money is ever deleted — mistakes are **voided** with a reason, and the voided receipt stays visible
-(this protects the owner and honest staff).
+Money mistakes are normally **voided** with a reason. A voided receipt stays visible marked VOID, which protects the
+owner and honest staff. When a record should not exist at all, such as a test entry or a member registered by
+mistake, the **owner** can delete it permanently.
 
 | Mistake | Fix (owner/admin) |
 |---|---|
 | Payment entered twice / wrong amount | Payments → ⊘ **Void** → enter the correct payment again |
+| Payment that should not exist at all | Payments → 🗑 **Delete permanently** (also in the member's **Payments & fees** tab) |
+| Wrong fee or charge on a member | Member → **Payments & fees** → ⊘ void it, or 🗑 delete it |
 | Wrong membership dates | Member → Memberships → ✎ **Correct dates** |
 | Membership should not exist | Member → Memberships → ⊘ **Cancel** (fee is removed; money paid stays as credit) |
 | Wrong check-in | Member → Attendance → 🗑 remove |
-| Member registered twice by mistake | Archive one (or delete it if it has no payments) |
+| Member registered by mistake, or a test member | Member → ▾ → **Delete permanently** |
 | Member left the gym | Member → ▾ → **Archive** (renewing later brings them back) |
 
-The **Activity log** shows who did what and when — it cannot be edited or deleted.
+**Void or delete?**
+
+- **Void** — the record stays, marked VOID, and no longer counts in any total. Use it for everyday mistakes, so
+  everyone can still see what happened.
+- **Delete permanently** (owner only) — the record is removed as if it was never entered. It disappears from
+  collections and reports, and the member owes that amount again. You must type a reason, and the **Activity log**
+  keeps a note of exactly what was deleted.
+
+![Delete a payment](screenshots/33-delete-payment.png)
+
+**Deleting a member** removes the member and everything about them: memberships, payments, fees, check-ins, photo
+and measurements. The window first shows how much will be removed. If the member simply left the gym, use
+**Archive** instead: the history stays and they can come back.
+
+![Delete a member](screenshots/34-delete-member.png)
+
+A membership fee can be deleted only after its membership is cancelled, so memberships and fees always match.
+
+The **Activity log** shows who did what and when, including every deletion. It cannot be edited or deleted.
 
 ![Activity log](screenshots/32-activity-log.png)
 
@@ -351,8 +409,10 @@ The **Activity log** shows who did what and when — it cannot be edited or dele
 | WhatsApp does not open | Install WhatsApp Desktop from the Microsoft Store, or switch to **WhatsApp Web** in settings. |
 | Sending a PDF on WhatsApp | After **PDF**, click **Show in folder** and drag the file into the WhatsApp chat. |
 | Receipt prints too small/large | Choose the correct paper in Settings → Payments & receipts; set margins to None. |
-| Forgot PIN | The owner resets it in Settings → Users & security → **PIN**. |
-| Owner forgot PIN | Restore needs the owner — keep the owner PIN written somewhere safe. |
+| Receptionist forgot PIN | The owner resets it in Settings → Users & security → **PIN**. |
+| Owner forgot PIN | Login screen → **Forgot PIN?** → type the recovery key ([details](#forgot-your-pin)). Key lost? **Lost the key?** → read the support code to Fahad Baloch. |
+| Recovery key paper lost | Log in as the owner → Settings → Users & security → **Create a new key**. The lost key stops working. |
+| No delete button | Only the owner/admin can delete, and a reason is always required. Receptionists can't delete records. |
 
 ## 19. Keyboard shortcuts
 

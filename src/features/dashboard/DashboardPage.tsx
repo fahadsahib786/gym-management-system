@@ -4,6 +4,7 @@ import {
   CalendarClock,
   CircleX,
   HandCoins,
+  KeyRound,
   LayoutDashboard,
   MessageCircle,
   Printer,
@@ -31,7 +32,7 @@ import { delta, formatDate, formatTime, money, num, phoneDisplay, timeAgo } from
 import { memberValues, type TemplateKey } from "@/lib/templates";
 import { cn } from "@/lib/utils";
 import { openDialog } from "@/stores/dialogs";
-import { useSession } from "@/stores/session";
+import { useCan, useSession } from "@/stores/session";
 import {
   ActiveTrendChart,
   BarList,
@@ -134,6 +135,8 @@ export function DashboardPage() {
   const actor = useSession((s) => s.actor);
   const settings = useSettings();
   const tracks = useTracksAttendance();
+  const status = useSession((s) => s.status);
+  const canManageUsers = useCan("manageUsers");
   const dash = useQuery({ queryKey: ["dashboard"], queryFn: api.dashboard.get, refetchInterval: 60_000 });
 
   if (dash.isPending) return <DashboardSkeleton />;
@@ -189,6 +192,18 @@ export function DashboardPage() {
           <RefreshCw className={cn(dash.isFetching && "animate-spin")} /> Refresh
         </Button>
       </div>
+
+      {canManageUsers && status && !status.recoveryKeyExists && (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/40 bg-warning-soft px-4 py-3 text-sm text-warning-ink">
+          <span className="flex items-center gap-2">
+            <KeyRound className="size-4 shrink-0" />
+            Create a recovery key so you can get back in if you ever forget the owner PIN.
+          </span>
+          <Button size="sm" variant="outline" onClick={() => openDialog({ type: "recovery-key" })}>
+            Create recovery key
+          </Button>
+        </div>
+      )}
 
       {/* ---------------------------------------------------------------- KPIs */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

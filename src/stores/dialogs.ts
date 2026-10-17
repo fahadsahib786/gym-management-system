@@ -8,6 +8,7 @@ export type DialogRequest =
   | { type: "charge"; memberId: string }
   | { type: "freeze"; memberId: string }
   | { type: "receipt"; paymentId: string; autoPrint?: boolean }
+  | { type: "recovery-key"; afterSetup?: boolean }
   | {
       type: "whatsapp";
       memberId?: string | null;

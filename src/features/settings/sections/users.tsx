@@ -20,7 +20,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Segmented, Switch } from "@/components/ui/menus";
 import { Badge, Card, CardHeader, CardTitle } from "@/components/ui/primitives";
-import { initials, timeAgo } from "@/lib/format";
+import { formatDateTime, initials, timeAgo } from "@/lib/format";
+import { openDialog } from "@/stores/dialogs";
 import { useSession } from "@/stores/session";
 
 function PinFields({
@@ -186,6 +187,35 @@ function ResetPinDialog({ user, onOpenChange }: { user: UserSummary; onOpenChang
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Owner recovery key status, with create / replace. */
+export function RecoveryKeyCard() {
+  const status = useQuery({ queryKey: ["recovery-status"], queryFn: api.auth.recoveryStatus });
+  const s = status.data;
+  return (
+    <Card>
+      <CardHeader className="items-center">
+        <div>
+          <CardTitle className="flex items-center gap-2">
+            <KeyRound className="size-4 text-muted-foreground" /> Owner recovery key
+          </CardTitle>
+          <p className="mt-1 text-muted-foreground text-xs">
+            {s?.exists
+              ? `Created ${formatDateTime(s.createdAt)}. Keep the paper safe; if you lose it, create a new key.`
+              : "Not created yet. Without it, a forgotten owner PIN can only be reset with the software provider's help."}
+          </p>
+        </div>
+        <Button
+          size="sm"
+          variant={s?.exists ? "outline" : "default"}
+          onClick={() => openDialog({ type: "recovery-key" })}
+        >
+          <KeyRound /> {s?.exists ? "Create a new key" : "Create recovery key"}
+        </Button>
+      </CardHeader>
+    </Card>
   );
 }
 

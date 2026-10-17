@@ -31,6 +31,8 @@ pub enum Permission {
     RecordPayments,
     BackdatePayments,
     VoidPayments,
+    /// Permanently delete payments and charges (recorded in the activity log).
+    DeletePayments,
     AddCharges,
     VoidCharges,
     RenewMemberships,
@@ -55,7 +57,7 @@ pub enum Permission {
 }
 
 impl Permission {
-    pub const ALL: [Permission; 28] = [
+    pub const ALL: [Permission; 29] = [
         Permission::RegisterMembers,
         Permission::EditMembers,
         Permission::ArchiveMembers,
@@ -63,6 +65,7 @@ impl Permission {
         Permission::RecordPayments,
         Permission::BackdatePayments,
         Permission::VoidPayments,
+        Permission::DeletePayments,
         Permission::AddCharges,
         Permission::VoidCharges,
         Permission::RenewMemberships,
@@ -177,21 +180,21 @@ pub struct UpdateUserInput {
     pub is_active: bool,
 }
 
-fn hash_pin(pin: &str) -> CoreResult<String> {
+pub(crate) fn hash_pin(pin: &str) -> CoreResult<String> {
     Argon2::default()
         .hash_password(pin.as_bytes())
         .map(|h| h.to_string())
         .map_err(|e| CoreError::other(format!("could not secure PIN: {e}")))
 }
 
-fn verify_pin(pin: &str, hash: &str) -> bool {
+pub(crate) fn verify_pin(pin: &str, hash: &str) -> bool {
     match PasswordHash::new(hash) {
         Ok(parsed) => Argon2::default().verify_password(pin.as_bytes(), &parsed).is_ok(),
         Err(_) => false,
     }
 }
 
-fn validate_pin(pin: &str) -> CoreResult<()> {
+pub(crate) fn validate_pin(pin: &str) -> CoreResult<()> {
     if pin.len() < 4 || pin.len() > 8 || !pin.chars().all(|c| c.is_ascii_digit()) {
         return Err(CoreError::validation("pin", "PIN must be 4 to 8 digits"));
     }
@@ -371,11 +374,11 @@ pub fn login(conn: &mut Connection, clock: &Clock, user_id: &str, pin: &str) -> 
         return Err(CoreError::conflict("This account is turned off. Ask the admin."));
     }
     let now = clock.now();
-    if let Some(until) = locked_until.as_deref().and_then(parse_ts) {
-        if until > now {
-            let secs = (until - now).num_seconds().max(1);
-            return Err(CoreError::conflict(format!("Too many wrong PINs. Try again in {secs} seconds.")));
-        }
+    if let Some(until) = locked_until.as_deref().and_then(parse_ts)
+        && until > now
+    {
+        let secs = (until - now).num_seconds().max(1);
+        return Err(CoreError::conflict(format!("Too many wrong PINs. Try again in {secs} seconds.")));
     }
     if !verify_pin(pin, &hash) {
         let failed = failed + 1;

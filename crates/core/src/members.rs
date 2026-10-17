@@ -669,24 +669,79 @@ pub fn restore(conn: &mut Connection, actor: &Actor, clock: &Clock, id: &str) ->
     Ok(())
 }
 
-/// Permanently deletes a member created by mistake. Members with any money history must be archived.
-pub fn delete(conn: &mut Connection, actor: &Actor, clock: &Clock, id: &str) -> CoreResult<()> {
-    actor.require(Permission::DeleteMembers)?;
-    let tx = db::write_tx(conn)?;
-    let m = get(&tx, clock, id)?;
-    let has_history: bool = tx.query_row(
-        "SELECT EXISTS(SELECT 1 FROM payments WHERE member_id = ?1)
-             OR EXISTS(SELECT 1 FROM charges WHERE member_id = ?1)
-             OR EXISTS(SELECT 1 FROM subscriptions WHERE member_id = ?1)",
+/// What deleting a member would remove (shown before the owner confirms).
+#[derive(Serialize, TS, Debug, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct MemberDeletePreview {
+    pub memberships: i64,
+    /// Payments that are not void, and their total — these leave the collection reports.
+    pub payments: i64,
+    pub payments_total: i64,
+    pub void_payments: i64,
+    pub charges: i64,
+    pub check_ins: i64,
+}
+
+pub fn delete_preview(conn: &Connection, id: &str) -> CoreResult<MemberDeletePreview> {
+    Ok(conn.query_row(
+        "SELECT (SELECT COUNT(*) FROM subscriptions WHERE member_id = ?1),
+                (SELECT COUNT(*) FROM payments WHERE member_id = ?1 AND voided_at IS NULL),
+                (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE member_id = ?1 AND voided_at IS NULL),
+                (SELECT COUNT(*) FROM payments WHERE member_id = ?1 AND voided_at IS NOT NULL),
+                (SELECT COUNT(*) FROM charges WHERE member_id = ?1),
+                (SELECT COUNT(*) FROM attendance WHERE member_id = ?1)",
         [id],
-        |r| r.get(0),
+        |r| {
+            Ok(MemberDeletePreview {
+                memberships: r.get(0)?,
+                payments: r.get(1)?,
+                payments_total: r.get(2)?,
+                void_payments: r.get(3)?,
+                charges: r.get(4)?,
+                check_ins: r.get(5)?,
+            })
+        },
+    )?)
+}
+
+/// Deletes a member and everything about them for good (admin): memberships, freezes, fees, payments, check-ins,
+/// measurements, messages and photo. The activity log keeps a summary. Archive is the normal way out.
+pub fn delete(conn: &mut Connection, actor: &Actor, clock: &Clock, id: &str, reason: &str) -> CoreResult<()> {
+    actor.require(Permission::DeleteMembers)?;
+    let reason = billing::require_reason(reason)?;
+    let tx = db::write_tx(conn)?;
+    let settings = settings::load(&tx)?;
+    let m = get(&tx, clock, id)?;
+    let p = delete_preview(&tx, id)?;
+    // Children first: payments, charges and freezes point at subscriptions; everything points at the member.
+    db::with_delete_permit(&tx, |c| {
+        c.execute("DELETE FROM payments WHERE member_id = ?1", [id])?;
+        c.execute("DELETE FROM charges WHERE member_id = ?1", [id])?;
+        c.execute("DELETE FROM freezes WHERE member_id = ?1", [id])?;
+        c.execute("DELETE FROM subscriptions WHERE member_id = ?1", [id])?;
+        // Check-ins, measurements, messages, photo and summary go with the member (ON DELETE CASCADE).
+        c.execute("DELETE FROM members WHERE id = ?1", [id])?;
+        Ok(())
+    })?;
+    let money = format_money(&settings.billing.currency, p.payments_total);
+    audit::record(
+        &tx,
+        actor,
+        clock,
+        "member.delete",
+        Some("member"),
+        Some(id),
+        format!(
+            "Deleted {} ({}) permanently with {} membership(s), {} payment(s) ({money}), {} void payment(s) and {} check-in(s): {reason}",
+            m.full_name, m.member_code, p.memberships, p.payments, p.void_payments, p.check_ins
+        ),
+        Some(serde_json::json!({
+            "memberCode": m.member_code, "name": m.full_name, "phone": m.phone, "cnic": m.cnic,
+            "memberships": p.memberships, "payments": p.payments, "paymentsTotal": p.payments_total,
+            "voidPayments": p.void_payments, "charges": p.charges, "checkIns": p.check_ins
+        })),
     )?;
-    if has_history {
-        return Err(CoreError::conflict("This member has membership or payment history, so they can only be archived."));
-    }
-    tx.execute("DELETE FROM freezes WHERE member_id = ?1", [id])?;
-    tx.execute("DELETE FROM members WHERE id = ?1", [id])?;
-    audit::record(&tx, actor, clock, "member.delete", Some("member"), Some(id), format!("Deleted {} ({})", m.full_name, m.member_code), None)?;
     tx.commit()?;
     Ok(())
 }

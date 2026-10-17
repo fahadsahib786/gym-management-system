@@ -70,6 +70,14 @@ if (await visible(page.getByRole("button", { name: "Get started" }))) {
   await snap("05-setup-finish");
   await page.getByRole("button", { name: /^Open / }).click();
   await page.getByText(/Good (morning|afternoon|evening)/).waitFor();
+  // Setup ends by offering the owner recovery key.
+  const keyDialog = page.getByRole("dialog");
+  await keyDialog.getByRole("button", { name: "Create recovery key" }).click();
+  await keyDialog.getByLabel("Recovery key").waitFor();
+  await snap("05b-recovery-key", 500);
+  await keyDialog.getByLabel("I have written down or printed this key").check();
+  await keyDialog.getByRole("button", { name: "Done" }).click();
+  await keyDialog.waitFor({ state: "detached" });
   log("setup done");
 
   // Demo data so every screen has realistic content (the app reloads to the login screen afterwards).
@@ -185,20 +193,15 @@ await page.waitForTimeout(6000);
 // ---------------------------------------------------------------- 7. WhatsApp, expenses, reports
 await go(page, "/messages");
 await snap("22-whatsapp", 1200);
-await page
-  .locator("main")
-  .getByRole("button", { name: /^Send/ })
-  .first()
-  .click()
-  .catch(() => {});
-if (
-  await page
-    .getByRole("dialog")
-    .isVisible()
-    .catch(() => false)
-) {
+// A message dialog (loads on first use: wait for it, then close it so it cannot cover later screens).
+const sendButton = page.locator("main").getByRole("button", { name: /^Send/ }).first();
+if (await sendButton.isVisible().catch(() => false)) {
+  await sendButton.click();
+  const message = page.getByRole("dialog");
+  await message.waitFor();
   await snap("23-whatsapp-message", 600);
   await page.keyboard.press("Escape");
+  await message.waitFor({ state: "detached" });
 }
 await go(page, "/expenses");
 await snap("24-expenses", 1200);
@@ -221,6 +224,47 @@ await go(page, "/settings?tab=backup");
 await snap("31-settings-backup", 1200);
 await go(page, "/activity");
 await snap("32-activity-log", 1200);
+
+// ---------------------------------------------------------------- 9. permanent deletes (owner) — dialogs only
+const confirm = page.getByRole("dialog");
+await go(page, "/payments");
+await page.waitForTimeout(1200);
+await page.getByRole("button", { name: "Delete permanently" }).first().click();
+await confirm.getByRole("textbox").fill("Entered twice by mistake");
+await snap("33-delete-payment", 500);
+await page.keyboard.press("Escape");
+await go(page, "/dues");
+await page.waitForTimeout(1200);
+await page.locator("tbody tr").first().click();
+await page.getByRole("tab", { name: "Overview" }).waitFor();
+await page.getByRole("button", { name: "More actions" }).click();
+await page.getByRole("menuitem", { name: "Delete permanently" }).click();
+await confirm
+  .getByText(/payment/)
+  .first()
+  .waitFor();
+await confirm.getByRole("textbox").fill("Registered by mistake");
+await snap("34-delete-member", 800);
+await page.keyboard.press("Escape");
+
+// ---------------------------------------------------------------- 10. forgot PIN (recovery key)
+await page.getByRole("button", { name: "Lock screen" }).click();
+await page.getByRole("button", { name: "Forgot PIN?" }).click();
+await confirm.getByLabel("Recovery key").fill("ABCDEFGHJKMNPQRSTUVW");
+await confirm.getByLabel("New PIN (4–8 digits)").fill("9876");
+await confirm.getByLabel("Repeat new PIN").fill("9876");
+await snap("35-forgot-pin", 500);
+// Lost the key: the support code to read out to the software provider (an example unlock code, not submitted).
+await confirm.getByRole("button", { name: "Lost the key?" }).click();
+await confirm.getByLabel("Support code").filter({ hasText: /-/ }).waitFor();
+await confirm.getByLabel("Unlock code").fill("ABCDEFGHJK");
+await confirm.getByLabel("New PIN (4–8 digits)").fill("9876");
+await confirm.getByLabel("Repeat new PIN").fill("9876");
+await snap("36-forgot-pin-support", 500);
+await page.keyboard.press("Escape");
+await page.keyboard.type(PIN);
+await page.keyboard.press("Enter");
+await page.locator("main").waitFor();
 
 await page.setViewportSize({ width: 1366, height: 745 }).catch(() => {});
 log("done");

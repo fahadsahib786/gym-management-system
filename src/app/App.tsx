@@ -8,6 +8,7 @@ import { ErrorState } from "@/components/common/page";
 import { TooltipProvider } from "@/components/ui/menus";
 import { LoginScreen } from "@/features/auth/LoginScreen";
 import { SetupWizard } from "@/features/setup/SetupWizard";
+import { openDialog } from "@/stores/dialogs";
 import { useSession } from "@/stores/session";
 import { useUi } from "@/stores/ui";
 import { queryClient } from "./query";
@@ -75,6 +76,7 @@ function Boot() {
         onDone={(owner) => {
           setActor(owner);
           void status.refetch();
+          openDialog({ type: "recovery-key", afterSetup: true });
         }}
       />
     );

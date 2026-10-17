@@ -51,7 +51,7 @@ import {
 } from "@/components/ui/menus";
 import { Badge, Card, Progress } from "@/components/ui/primitives";
 import { useMember, useSettings, useTracksAttendance } from "@/hooks/queries";
-import { daysFromToday, formatDate, money, num, phoneDisplay, timeAgo } from "@/lib/format";
+import { daysFromToday, formatDate, money, num, phoneDisplay, plural, timeAgo } from "@/lib/format";
 import { photoUrl } from "@/lib/photo";
 import { memberValues, type TemplateKey } from "@/lib/templates";
 import { cn } from "@/lib/utils";
@@ -174,6 +174,11 @@ export function MemberProfilePage() {
   const [photoOpen, setPhotoOpen] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const deletePreview = useQuery({
+    queryKey: ["member-delete-preview", id],
+    queryFn: () => api.members.deletePreview(id),
+    enabled: deleteOpen,
+  });
   const freezes = useQuery({ queryKey: ["freezes", id], queryFn: () => api.freezes.list(id), enabled: !!id });
 
   if (member.isPending) return <LoadingBlock className="py-24" />;
@@ -492,12 +497,39 @@ export function MemberProfilePage() {
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title={`Delete ${m.fullName} permanently?`}
-        description="Only possible for members registered by mistake, with no membership or payment history. This cannot be undone."
+        description={
+          <span className="flex flex-col gap-2">
+            <span>
+              This removes the member and <b>everything</b> about them
+              {deletePreview.data
+                ? `: ${plural(deletePreview.data.memberships, "membership")}, ${plural(deletePreview.data.payments, "payment")}${
+                    deletePreview.data.payments ? ` (${money(deletePreview.data.paymentsTotal)})` : ""
+                  }${deletePreview.data.voidPayments ? `, ${plural(deletePreview.data.voidPayments, "void payment")}` : ""}, ${plural(
+                    deletePreview.data.checkIns,
+                    "check-in",
+                  )}`
+                : ""}
+              . It cannot be undone.
+            </span>
+            {!!deletePreview.data?.payments && (
+              <span className="rounded-md bg-danger-soft px-2.5 py-1.5 text-danger-ink">
+                {money(deletePreview.data.paymentsTotal)} of payments will disappear from collections and
+                reports.
+              </span>
+            )}
+            <span>
+              If the member just left the gym, use <b>Archive</b> instead — the history stays. The activity
+              log keeps a note of this deletion.
+            </span>
+          </span>
+        }
         confirmLabel="Delete forever"
         destructive
-        onConfirm={async () => {
+        requireReason
+        reasonPlaceholder="e.g. registered by mistake, test entry"
+        onConfirm={async (reason) => {
           try {
-            await api.members.remove(m.id);
+            await api.members.remove(m.id, reason);
             toast.success("Member deleted");
             navigate("/members", { replace: true });
           } catch (e) {

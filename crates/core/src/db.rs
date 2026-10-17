@@ -11,7 +11,10 @@ use crate::error::{CoreError, CoreResult};
 pub type Pool = r2d2::Pool<SqliteConnectionManager>;
 
 /// Ordered list of migrations; index + 1 = schema version stored in `PRAGMA user_version`.
-const MIGRATIONS: &[&str] = &[include_str!("../migrations/0001_init.sql")];
+const MIGRATIONS: &[&str] = &[
+    include_str!("../migrations/0001_init.sql"),
+    include_str!("../migrations/0002_permanent_deletes.sql"),
+];
 
 /// Current schema version understood by this build.
 pub const SCHEMA_VERSION: i64 = MIGRATIONS.len() as i64;
@@ -78,6 +81,16 @@ pub fn open_pool(path: &Path, size: u32) -> CoreResult<Pool> {
 /// Starts a write transaction that takes the write lock up front (avoids lock-upgrade deadlocks).
 pub fn write_tx(conn: &mut Connection) -> CoreResult<Transaction<'_>> {
     Ok(conn.transaction_with_behavior(TransactionBehavior::Immediate)?)
+}
+
+/// Runs permanent deletes of payments / charges, which the database refuses otherwise (admin actions that the
+/// caller records in the activity log). The permit only exists inside the caller's transaction: if anything
+/// fails the transaction rolls back and the permit with it.
+pub fn with_delete_permit<T>(tx: &Transaction<'_>, f: impl FnOnce(&Connection) -> CoreResult<T>) -> CoreResult<T> {
+    tx.execute("UPDATE delete_permit SET active = 1 WHERE id = 1", [])?;
+    let out = f(tx)?;
+    tx.execute("UPDATE delete_permit SET active = 0 WHERE id = 1", [])?;
+    Ok(out)
 }
 
 /// Increments and returns a named counter (receipt numbers, member codes).
@@ -178,6 +191,27 @@ impl Database {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn version_1_databases_upgrade_to_the_delete_permit() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        apply_pragmas(&conn).unwrap();
+        conn.execute_batch(MIGRATIONS[0]).unwrap();
+        conn.pragma_update(None, "user_version", 1).unwrap();
+        migrate(&mut conn).unwrap();
+        assert_eq!(schema_version(&conn).unwrap(), SCHEMA_VERSION);
+        let active: i64 = conn.query_row("SELECT active FROM delete_permit WHERE id = 1", [], |r| r.get(0)).unwrap();
+        assert_eq!(active, 0);
+        let guarded: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger' AND name IN ('trg_payments_no_delete', 'trg_charges_no_delete')
+                 AND sql LIKE '%delete_permit%'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(guarded, 2);
+    }
 
     #[test]
     fn migrations_apply_and_counters_work() {

@@ -40,7 +40,8 @@ const quickStart = `
     <li><b>Open</b> the <b>Danish Fitness</b> icon on the desktop.</li>
     <li><b>Set up:</b> Get started → gym details → owner name and PIN → fees &amp; plans → <b>Open Danish Fitness</b>
       (section 2).</li>
-    <li><b>Write down the owner PIN</b> and keep it somewhere safe.</li>
+    <li><b>Print the recovery key</b> offered right after setup and keep it at home — it resets a forgotten
+      owner PIN.</li>
     <li><b>Add staff:</b> Settings → Users &amp; security → one account and PIN per receptionist.</li>
     <li><b>Backups</b> are automatic (normally to <code>D:\\Danish Fitness\\Backups</code>). For extra safety set a USB drive
       as the second copy in Settings → Backup &amp; restore.</li>
@@ -103,7 +104,7 @@ const html = `<!doctype html>
   blockquote p { margin: 0; }
   hr { border: 0; border-top: 1px solid #dfe2ea; margin: 6mm 0; }
   /* A step's text stays on the same page as its screenshot. */
-  p:has(+ p > img), p:has(+ img) { break-after: avoid; }
+  p:has(+ p > img), p:has(+ img) { break-after: avoid; break-inside: avoid; }
   p:has(> img) { break-before: avoid; }
   /* Contents: two columns of section links, then the quick start. */
   h2#contents + ol { columns: 2; column-gap: 10mm; font-size: 11pt; }

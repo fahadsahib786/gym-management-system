@@ -5,7 +5,7 @@
 //        npm run app:dev        (or run the release exe)
 //   2. node e2e/smoke.mjs      → screenshots in e2e/output/
 //
-// Flow: first-run setup → demo data → login → every main screen → register a member (uploaded photo) →
+// Flow: first-run setup and recovery key → demo data → login → every main screen → register a member (uploaded photo) →
 // webcam photo → member card → payment → check-in → attendance switched off and on again.
 //
 // Webcam test: also pass fake cameras to WebView2 (no real camera is used, no prompt may appear):
@@ -66,6 +66,14 @@ if (await isVisible(page.getByRole("button", { name: "Get started" }))) {
   await shot(page, "04-setup-finish");
   await page.getByRole("button", { name: /^Open / }).click();
   await page.getByText(/Good (morning|afternoon|evening)/).waitFor();
+  // Setup ends by offering the owner recovery key.
+  const keyDialog = page.getByRole("dialog");
+  await keyDialog.getByRole("button", { name: "Create recovery key" }).click();
+  await keyDialog.getByLabel("Recovery key").waitFor();
+  await keyDialog.getByLabel("I have written down or printed this key").check();
+  await keyDialog.getByRole("button", { name: "Done" }).click();
+  await keyDialog.waitFor({ state: "detached" });
+  log("recovery key created");
   log("setup completed");
   await shot(page, "05-dashboard-empty");
 

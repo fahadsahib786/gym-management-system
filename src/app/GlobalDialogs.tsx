@@ -1,5 +1,6 @@
 import { lazy, type ReactNode, Suspense } from "react";
 import { useDialogs } from "@/stores/dialogs";
+import { useSession } from "@/stores/session";
 
 // Dialogs load on first use, keeping the start-up bundle small.
 const ReceivePaymentDialog = lazy(() =>
@@ -17,6 +18,9 @@ const FreezeDialog = lazy(() =>
 const ReceiptDialog = lazy(() =>
   import("@/features/payments/ReceiptDialog").then((m) => ({ default: m.ReceiptDialog })),
 );
+const RecoveryKeyDialog = lazy(() =>
+  import("@/features/auth/recovery").then((m) => ({ default: m.RecoveryKeyDialog })),
+);
 const WhatsAppDialog = lazy(() =>
   import("@/features/messages/WhatsAppDialog").then((m) => ({ default: m.WhatsAppDialog })),
 );
@@ -25,6 +29,7 @@ const WhatsAppDialog = lazy(() =>
 export function GlobalDialogs() {
   const current = useDialogs((s) => s.current);
   const close = useDialogs((s) => s.close);
+  const status = useSession((s) => s.status);
   if (!current) return null;
   const onOpenChange = (open: boolean) => {
     if (!open) close();
@@ -54,6 +59,15 @@ export function GlobalDialogs() {
       break;
     case "whatsapp":
       dialog = <WhatsAppDialog request={current} onOpenChange={onOpenChange} />;
+      break;
+    case "recovery-key":
+      dialog = (
+        <RecoveryKeyDialog
+          afterSetup={current.afterSetup}
+          gym={{ name: status?.gymName ?? "Danish Fitness", logo: status?.gymLogo }}
+          onOpenChange={onOpenChange}
+        />
+      );
       break;
   }
   return <Suspense fallback={null}>{dialog}</Suspense>;

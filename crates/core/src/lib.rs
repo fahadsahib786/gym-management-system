@@ -22,6 +22,7 @@ pub mod memberships;
 pub mod messages;
 pub mod model;
 pub mod plans;
+pub mod recovery;
 pub mod seed;
 pub mod settings;
 pub mod stats;

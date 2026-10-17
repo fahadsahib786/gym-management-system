@@ -153,10 +153,10 @@ pub fn run() {
             let handle = app.handle().clone();
             std::thread::spawn(move || {
                 std::thread::sleep(Duration::from_secs(6));
-                if let Some(w) = handle.get_webview_window("main") {
-                    if !w.is_visible().unwrap_or(true) {
-                        let _ = w.show();
-                    }
+                if let Some(w) = handle.get_webview_window("main")
+                    && !w.is_visible().unwrap_or(true)
+                {
+                    let _ = w.show();
                 }
             });
             Ok(())
@@ -176,6 +176,11 @@ pub fn run() {
             commands::auth_logout,
             commands::auth_session,
             commands::auth_change_pin,
+            commands::auth_recovery_status,
+            commands::auth_create_recovery_key,
+            commands::auth_reset_pin_with_key,
+            commands::auth_support_code,
+            commands::auth_reset_pin_with_support,
             commands::users_list,
             commands::users_create,
             commands::users_update,
@@ -197,6 +202,7 @@ pub fn run() {
             commands::members_archive,
             commands::members_restore,
             commands::members_delete,
+            commands::members_delete_preview,
             commands::members_set_photo,
             commands::members_remove_photo,
             commands::members_duplicates,
@@ -214,8 +220,10 @@ pub fn run() {
             commands::payments_list,
             commands::payments_receipt,
             commands::payments_void,
+            commands::payments_delete,
             commands::charges_add,
             commands::charges_void,
+            commands::charges_delete,
             commands::charges_list,
             commands::ledger_get,
             commands::dues_list,

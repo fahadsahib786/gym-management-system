@@ -21,6 +21,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { toast } from "sonner";
 import type {
   FreezeRow,
+  LedgerEntry,
   Measurement,
   Member,
   PaidStatus,
@@ -413,9 +414,11 @@ export function LedgerTab({ member }: { member: Member }) {
   const canCharge = useCan("addCharges");
   const canVoidPayment = useCan("voidPayments");
   const canVoidCharge = useCan("voidCharges");
+  const canDelete = useCan("deletePayments");
   const ledger = useQuery({ queryKey: ["ledger", member.id], queryFn: () => api.ledger.get(member.id) });
   const settings = useSettings();
   const [voiding, setVoiding] = useState<{ id: string; type: string; label: string } | null>(null);
+  const [deleting, setDeleting] = useState<LedgerEntry | null>(null);
   const rows = useMemo(() => [...(ledger.data ?? [])].reverse(), [ledger.data]);
 
   return (
@@ -532,6 +535,17 @@ export function LedgerTab({ member }: { member: Member }) {
                         <Ban />
                       </Button>
                     )}
+                  {canDelete && (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      title="Delete permanently"
+                      aria-label="Delete permanently"
+                      onClick={() => setDeleting(r)}
+                    >
+                      <Trash />
+                    </Button>
+                  )}
                 </TD>
               </TR>
             ))}
@@ -556,6 +570,38 @@ export function LedgerTab({ member }: { member: Member }) {
             if (voiding.type === "payment") await api.payments.void(voiding.id, reason);
             else await api.charges.void(voiding.id, reason);
             toast.success("Voided");
+          } catch (e) {
+            toast.error(errorMessage(e));
+            throw e;
+          }
+        }}
+      />
+      <ConfirmDialog
+        open={!!deleting}
+        onOpenChange={(o) => !o && setDeleting(null)}
+        title={
+          deleting?.entryType === "payment"
+            ? "Delete this payment permanently?"
+            : "Delete this charge permanently?"
+        }
+        description={
+          deleting
+            ? deleting.voided
+              ? `“${deleting.description}” is already void; it will be removed from every list. The activity log keeps a record.`
+              : deleting.entryType === "payment"
+                ? `${money(deleting.credit)} (${deleting.receiptNo}) will be removed completely: it leaves collections and reports, and the balance due goes up by this amount. To keep it visible as cancelled, use Void instead. The activity log keeps a record.`
+                : `“${deleting.description}” (${money(deleting.debit)}) will be removed completely and the balance due goes down by this amount. Membership fees go by cancelling the membership first. The activity log keeps a record.`
+            : ""
+        }
+        confirmLabel="Delete forever"
+        destructive
+        requireReason
+        onConfirm={async (reason) => {
+          if (!deleting) return;
+          try {
+            if (deleting.entryType === "payment") await api.payments.remove(deleting.id, reason);
+            else await api.charges.remove(deleting.id, reason);
+            toast.success("Deleted");
           } catch (e) {
             toast.error(errorMessage(e));
             throw e;
